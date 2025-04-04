@@ -18,12 +18,22 @@ The system maintains the radiologist as the ultimate decision-maker while provid
 
 - **ML Solution:** Our system automates the initial analysis of CXRs using YOLOv11, trained on the VinBigData dataset (~205GB). It processes each image, delivering bounding boxes and scores that pinpoint abnormalities, allowing radiologists to focus their attention more effectively. By integrating into the existing radiology workflow via an API, our solution enhances rather than replaces the current service, addressing the professor’s requirement to avoid proposing a new business.
 
-- **Business Metrics:** We will be judged on two key performance indicators (KPIs) that tie directly to operational improvements in the radiology department to outperform the status quo on business-relevant metrics:
+- **Business Metrics:** Our chest X-ray AI assistant aims to improve two key business metrics:
+- **Radiologist efficiency** - Help radiologists spend less time reviewing each CXR
+- **Diagnostic accuracy** - Help radiologists miss fewer pathologies
 
-  - **Radiologists Spend Less Time per CXR:** We aim to reduce average reading time by 20-30%, from 81 seconds to 56-63 seconds per image. This leverages YOLOv11’s rapid inference to minimize manual scrutiny, improving throughput and reducing radiologist fatigue—key concerns in a production environment where velocity matters.
-  - **Radiologists Miss Fewer Pathologies:** We target a 10-20% increase in sensitivity (e.g., from 70% to 84%), ensuring fewer abnormalities are overlooked. By providing visual cues (bounding boxes), our system enhances diagnostic accuracy, aligning with the need for validation and quality in ML pipelines.
+Following our manager Fraida Fund's (:) guidance, while we cannot implement a full business evaluation in our academic setting, we can evaluate "radiologists missing fewer pathologies" using the VinDr-CXR dataset:
 
-Unlike a prototype focused on ML metrics (e.g., mAP), our production-oriented system prioritizes business KPIs, addressing real-world needs in radiology. For radiology, speed and accuracy are paramount, not explainability or concurrent users. By automating detection and integrating with existing workflows, we reduce the “technical debt” of manual processes, delivering a scalable, high-quality solution.
+We'll use images in our test set that were labeled by specific radiologists, compute their accuracy relative to consensus labels, and then simulate AI-assisted accuracy in two scenarios:
+
+- Assuming radiologists follow all AI suggestions
+- Assuming radiologists only follow AI input when they initially would have labeled the image as "no finding" but the AI detected a pathology
+
+This approach allows us to estimate potential improvements in pathology detection without requiring clinical deployment.
+
+For "reduced interpretation time," we would define a measurement plan for future implementation in a production environment, comparing baseline reading times against AI-assisted reading times.
+
+We recognize that in practice, studies have shown radiologists sometimes ignore AI assistance and sometimes trust it too much even when incorrect. Our evaluation considers whether our system provides genuine improvement over the status quo of human-only interpretation.
 
 ## Contributors
 
