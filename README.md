@@ -16,24 +16,22 @@ The system maintains the radiologist as the ultimate decision-maker while provid
 
 - **Status Quo (Non-ML):** In hospital radiology departments, radiologists manually interpret 50-100 CXRs daily, spending an average of a few minutes per image. This process relies entirely on human expertise, with no computational assistance. Fatigue and high workloads lead to missed pathologies, leading to an increase in error rates. 
 
-- **ML Solution:** Our system automates the initial analysis of CXRs using YOLOv11, trained on the VinBigData dataset (~205GB). It processes each image, delivering bounding boxes and scores that pinpoint abnormalities, allowing radiologists to focus their attention more effectively. By integrating into the existing radiology workflow via an API, our solution enhances rather than replaces the current service, addressing the professor’s requirement to avoid proposing a new business.
 
 - **Business Metrics:** Our chest X-ray AI assistant aims to improve two key business metrics:
-- **Radiologist efficiency** - Help radiologists spend less time reviewing each CXR
-- **Diagnostic accuracy** - Help radiologists miss fewer pathologies
+	- **Radiologist efficiency** - Help radiologists spend less time reviewing each CXR
+	- **Diagnostic accuracy** - Help radiologists miss fewer pathologies
 
-Following our manager Fraida Fund's (:) guidance, while we cannot implement a full business evaluation in our academic setting, we can evaluate "radiologists missing fewer pathologies" using the VinDr-CXR dataset:
+- Following our manager Fraida Fund's (:) guidance, while we cannot implement a full business evaluation in our academic setting, we can evaluate "radiologists missing fewer pathologies" using the VinDr-CXR dataset:
 
-We'll use images in our test set that were labeled by specific radiologists, compute their accuracy relative to consensus labels, and then simulate AI-assisted accuracy in two scenarios:
+ - We'll use images in our test set that were labeled by specific radiologists, compute their accuracy relative to consensus labels, and then simulate AI-assisted accuracy in two scenarios:
 
-- Assuming radiologists follow all AI suggestions
-- Assuming radiologists only follow AI input when they initially would have labeled the image as "no finding" but the AI detected a pathology
+	- Assuming radiologists follow all AI suggestions
+	- Assuming radiologists only follow AI input when they initially would have labeled the image as "no finding" but the AI detected a pathology
 
-This approach allows us to estimate potential improvements in pathology detection without requiring clinical deployment.
+ - This approach allows us to estimate potential improvements in pathology detection without requiring clinical deployment.
 
-For "reduced interpretation time," we would define a measurement plan for future implementation in a production environment, comparing baseline reading times against AI-assisted reading times.
-
-We recognize that in practice, studies have shown radiologists sometimes ignore AI assistance and sometimes trust it too much even when incorrect. Our evaluation considers whether our system provides genuine improvement over the status quo of human-only interpretation.
+ - For "reduced interpretation time," we would define a measurement plan for future implementation in a production environment, comparing baseline reading times against AI-assisted reading times.
+ - We recognize that in practice, studies have shown radiologists sometimes ignore AI assistance and sometimes trust it too much even when incorrect. Our evaluation considers whether our system provides genuine improvement over the status quo of human-only interpretation.
 
 ## Contributors
 
