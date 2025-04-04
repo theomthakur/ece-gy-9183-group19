@@ -1,6 +1,4 @@
-# ECE-GY-9183 - GROUP 19
-
-# Chest X-ray Abnormality Detection System for Radiology Departments
+# ECE-GY-9183 - GROUP 19 - Chest X-ray Abnormality Detection System for Radiology Departments
 
 ## Value Proposition
 Our project proposes a machine learning system to enhance chest X-ray (CXR) analysis within existing hospital radiology departments, a critical service in healthcare. Leveraging YOLOv8, a state-of-the-art object detection model, our system identifies and localizes 14 common pathologies (e.g., pneumothorax, consolidation) in CXRs, providing radiologists with bounding boxes and confidence scores to streamline their diagnostic workflow. 
@@ -36,6 +34,8 @@ link to their contributions in all repos here. -->
 
 
 ### System diagram
+
+![](https://github.com/theomthakur/ece-gy-9183-group19/blob/main/systemdesign.png)
 
 <!-- Overall digram of system. Doesn't need polish, does need to show all the pieces. 
 Must include: all the hardware, all the containers/software platforms, all the models, 
