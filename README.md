@@ -2,7 +2,7 @@
 
 ## Value Proposition
 
-Our system is an AI-assisted chest X-ray analysis system that uses YOLOv8 to both classify pathologies AND localize abnormalities with bounding boxes. The system works with the VinDr-CXR dataset, which contains annotations from multiple radiologists, enabling robust evaluation of AI assistance benefits.
+Our system is an AI-assisted chest X-ray analysis system that uses YOLOv11-L to both classify pathologies AND localize abnormalities with bounding boxes. The system works with the VinDr-CXR dataset, which contains annotations from multiple radiologists, enabling robust evaluation of AI assistance benefits.
 
 Our system enhances radiologist workflow in hospital settings by:
 
@@ -187,15 +187,15 @@ Our final report will detail the system-level optimizations implemented, the con
 
 ## UNIT 7: Evaluation and monitoring 
 
-- **Offline Evaluation:**: YOLOv11 will be evaluated offline using VinBigData’s test set of around 3,600 images. The evaluation will include standard metrics like mAP@0.5 for detection accuracy, domain-specific metrics such as sensitivity for each pathology (e.g., pneumothorax), and performance analysis by pathology and image quality (e.g., noisy vs. clear images). Template-based unit tests will also be conducted to check robustness, such as ensuring Gaussian noise does not affect major detections and occlusion reduces confidence scores. The process will be automated using Python and logged in MLFlow. The model will pass if it achieves an mAP@0.5 above 0.4 and improves sensitivity over the baseline (e.g., 70%).
+- **Offline Evaluation:**: YOLOv11 will be evaluated offline using VinBigData’s test set of around 3,600 images. The evaluation will include standard metrics like mAP@0.5 for detection accuracy, domain-specific metrics such as sensitivity for each pathology (e.g., pneumothorax), and performance analysis by pathology and image quality (e.g., noisy vs. clear images). Template-based unit tests will also be conducted to check robustness, such as ensuring Gaussian noise does not affect major detections and occlusion reduces confidence scores. The process will be automated using Python and logged in MLFlow.
 
-- **Load Test in Staging:** In staging, the system will be tested by simulating 1,000 chest X-rays (CXRs) per day. Prometheus will log throughput and latency metrics, which will be visualized in Grafana dashboards to ensure the system can handle the workload effectively.
+- **Load Test in Staging:** In staging, the system will be tested by simulating chest X-rays (CXRs). Prometheus will log throughput and latency metrics, which will be visualized in Grafana dashboards to ensure the system can handle the workload effectively.
 
-- **Online Evaluation in Canary:** For canary evaluation, 10% of artificial requests will simulate radiologists uploading CXRs to test the new system. Prometheus will track latency (targeting less than 100ms), throughput, and simulated sensitivity using VinBigData labels. These metrics will be displayed in Grafana dashboards for real-time monitoring.
+- **Online Evaluation in Canary:** For canary evaluation, artificial requests will simulate radiologists uploading CXRs to test the new system. Prometheus will track latency (targeting less than 100ms), throughput, and simulated sensitivity using VinBigData labels. These metrics will be displayed in Grafana dashboards for real-time monitoring.
 
-- **Feedback Loop:** A feedback loop will flag predictions with confidence below 0.8 for simulated human review by radiologists. Additionally, 5% of production data will be saved and labeled for retraining, ensuring continuous improvement of the model.
+- **Feedback Loop:** A feedback loop will flag predictions with confidence below a certain threshold for simulated human review by radiologists. Additionally, some part of production data will be saved and labeled for retraining, ensuring continuous improvement of the model.
   
-- **Business-Specific Evaluation:** Two business-specific metrics will be defined, time saved and missed pathologies. Prometheus will log baseline processing times of 81 seconds per CXR compared to AI-assisted times, targeting a reduction to 56-63 seconds (20-30%). Inference times under 100ms will support this goal and will be visualized in Grafana. Missed pathologies will be measured by comparing radiologist sensitivity (e.g., 70%) with AI-assisted sensitivity, targeting a 10-20% improvement (e.g., up to 84%), using VinBigData labels. These results will also be displayed in Grafana.
+- **Business-Specific Evaluation:** Two business-specific metrics will be defined, time saved and missed pathologies. Prometheus will log baseline processing times compared to AI-assisted times. Inference times will support this goal and will be visualized in Grafana. Missed pathologies will be measured by comparing radiologist sensitivity with AI-assisted sensitivity, using VinBigData labels. These results will also be displayed in Grafana.
 
 - **Monitoring:** Prometheus will collect latency, throughput, and confidence scores during production to support load testing, canary evaluations, and feedback loops. Grafana will provide visualizations for these metrics and business evaluation results.
 
@@ -209,7 +209,7 @@ Our final report will detail the system-level optimizations implemented, the con
 
 - **Offline Data Management:** For offline data management, the VinDr-CXR dataset, which includes chest X-rays and radiologist annotations, will be stored and organized. A simple folder structure will be created to separate the data into training, validation, and test splits. To ensure traceability and consistency, the data will be version-controlled to track any preprocessing changes or updates.
 
-- **ETL Pipeline:** The ETL pipeline will handle the end-to-end processing of the VinDr-CXR dataset. This pipeline will download and extract the dataset, resize images to match the format required by YOLOv8, and convert radiologist annotations into a YOLO-compatible format. It will also filter out corrupted or unusable images and save the processed data in a format ready for training. Additionally, a mechanism will be implemented to incorporate feedback data into the pipeline for retraining purposes.
+- **ETL Pipeline:** The ETL pipeline will handle the end-to-end processing of the VinDr-CXR dataset. This pipeline will download and extract the dataset, resize images to match the format required by YOLOv11-L, and convert radiologist annotations into a YOLO-compatible format. It will also filter out corrupted or unusable images and save the processed data in a format ready for training. Additionally, a mechanism will be implemented to incorporate feedback data into the pipeline for retraining purposes.
 
 - **Online Data:** To simulate online data usage, a simple script will be developed that sends X-ray images to the system at a realistic rate, mimicking real hospital scenarios. The script will include a mix of normal and abnormal cases. These images will undergo the same preprocessing steps as those used for training data to maintain consistency.
 
