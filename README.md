@@ -14,7 +14,8 @@ Our system enhances radiologist workflow in hospital settings by:
 
 The system maintains the radiologist as the ultimate decision-maker while providing assistive insights that improve diagnostic accuracy and workflow efficiency. Our evaluation will specifically measure how the AI assistance reduces pathology miss rates compared to unassisted radiologist performance.
 
-- **Status Quo (Non-ML):** In hospital radiology departments, radiologists manually interpret 50-100 CXRs daily, spending an average of a few minutes per image. This process relies entirely on human expertise, with no computational assistance. Fatigue and high workloads lead to missed pathologies, leading to an increase in error rates. 
+- **Status Quo (Non-ML):** In hospital radiology departments, radiologists manually interpret 50-100 CXRs daily, spending an average of a few minutes per image. This process relies entirely on human expertise, with no computational assistance. Fatigue and high workloads lead to missed pathologies, leading to an increase in error rates.
+- **Methods for addressing over-dependence :** For addressing the biases that might occur when doctors may get too dependent on AI to make their decisions, we will make use of auditing and training. There will also be warninigs reminding the doctors about this in the middle. 
 
 
 - **Business Metrics:** Our chest X-ray AI assistant aims to improve two key business metrics:
