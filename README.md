@@ -18,32 +18,13 @@ The system maintains the radiologist as the ultimate decision-maker while provid
 
 - **ML Solution:** Our system automates the initial analysis of CXRs using YOLOv11, trained on the VinBigData dataset (~205GB). It processes each image, delivering bounding boxes and scores that pinpoint abnormalities, allowing radiologists to focus their attention more effectively. By integrating into the existing radiology workflow via an API, our solution enhances rather than replaces the current service, addressing the professor’s requirement to avoid proposing a new business.
 
-## Business Metrics Evaluation
+- **Business Metrics:** We will be judged on two key performance indicators (KPIs) that tie directly to operational improvements in the radiology department to outperform the status quo on business-relevant metrics:
 
-## Simulating Business Impact in Academic Setting
+  - **Radiologists Spend Less Time per CXR:** We aim to reduce average reading time by 20-30%, from 81 seconds to 56-63 seconds per image. This leverages YOLOv11’s rapid inference to minimize manual scrutiny, improving throughput and reducing radiologist fatigue—key concerns in a production environment where velocity matters.
+  - **Radiologists Miss Fewer Pathologies:** We target a 10-20% increase in sensitivity (e.g., from 70% to 84%), ensuring fewer abnormalities are overlooked. By providing visual cues (bounding boxes), our system enhances diagnostic accuracy, aligning with the need for validation and quality in ML pipelines.
 
-As this is an academic project, we can't directly measure real-world business impact. However, following Professor Fund's guidance, we can define and partially simulate business metrics using our available data.
+Unlike a prototype focused on ML metrics (e.g., mAP), our production-oriented system prioritizes business KPIs, addressing real-world needs in radiology. For radiology, speed and accuracy are paramount, not explainability or concurrent users. By automating detection and integrating with existing workflows, we reduce the “technical debt” of manual processes, delivering a scalable, high-quality solution.
 
-### Measuring "Radiologists Missing Fewer Pathologies"
-
-We can evaluate this metric using the VinDr-CXR dataset which contains labels from multiple radiologists:
-
-- We'll identify test images labeled by specific radiologists
-- Calculate each radiologist's accuracy compared to consensus labels
-- Simulate AI-assisted accuracy by:
-  - Analyzing cases where a radiologist labeled "no finding" but the AI detected a pathology
-  - Assuming the radiologist would review and potentially correct their diagnosis based on AI suggestions
-
-This approach gives us insight into how our system might help radiologists catch pathologies they initially missed.
-
-### Future Real-World Metrics (Not Implemented)
-
-For a production deployment, we would measure:
-
-- *Reading Time Efficiency*: Compare the time radiologists spend per chest X-ray with and without AI assistance
-- *Workflow Integration*: Track how often radiologists accept or modify AI suggestions
-
-While we cannot implement these measurements within our academic project constraints, this evaluation framework would help assess real-world impact in an actual clinical setting.
 ## Contributors
 
 <!-- Table of contributors and their roles. 
@@ -93,10 +74,11 @@ The table below shows an example, it is not a recommendation. -->
 | Requirement     | How many/when                                     | Justification |
 |-----------------|---------------------------------------------------|---------------|
 | `compute_liqid` | 4x A100 GPUs                     | Required for training models           |
-| `gpu_p100`     | 1                        |          |
+| `gpu_p100`     | 1                        | Model Inferencing  |
 | Floating IPs    | 2 | 1 for model serving API, 1 for monitoring |
+| Object Storage | 1 volume - 250GB | Storing the dataset |
 | Persistent Volume | 1 volume - 10GB | Model checkpoints, Retrained Models & Logs |
-| 
+
 
 ## Detailed design plan
 
