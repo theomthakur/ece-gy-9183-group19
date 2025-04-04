@@ -18,7 +18,7 @@ The system maintains the radiologist as the ultimate decision-maker while provid
 
 - **ML Solution:** Our system automates the initial analysis of CXRs using YOLOv11, trained on the VinBigData dataset (~205GB). It processes each image, delivering bounding boxes and scores that pinpoint abnormalities, allowing radiologists to focus their attention more effectively. By integrating into the existing radiology workflow via an API, our solution enhances rather than replaces the current service, addressing the professor’s requirement to avoid proposing a new business.
 
-# Business Metrics Evaluation
+## Business Metrics Evaluation
 
 ## Simulating Business Impact in Academic Setting
 
