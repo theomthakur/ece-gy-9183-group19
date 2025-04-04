@@ -42,12 +42,12 @@ all the data. -->
 Name of data/model, conditions under which it was created (ideally with links/references), 
 conditions under which it may be used. -->
 
-|              | How it was created | Conditions of use |
-|--------------|--------------------|-------------------|
-| Data set 1   |                    |                   |
-| Data set 2   |                    |                   |
-| Base model 1 |                    |                   |
-| etc          |                    |                   |
+### Summary of outside materials
+
+|                                      | How it was created | Conditions of use |
+|--------------------------------------|--------------------|-------------------|
+| VinBigData Chest X-Ray dataset | [Paper Link](https://arxiv.org/pdf/2012.15029) | See Usage Notes section in the [research paper](https://arxiv.org/pdf/2012.15029) |
+| YOLOv11-L | [Documentation](https://docs.ultralytics.com/models/yolo11/) | [AGPL 3.0 Software License](https://www.ultralytics.com/legal/agpl-3-0-software-license) |
 
 
 ### Summary of infrastructure requirements
