@@ -1,11 +1,22 @@
 # ECE-GY-9183 - GROUP 19 - Chest X-ray Abnormality Detection System for Radiology Departments
 
 ## Value Proposition
-Our project proposes a machine learning system to enhance chest X-ray (CXR) analysis within existing hospital radiology departments, a critical service in healthcare. Leveraging YOLOv8, a state-of-the-art object detection model, our system identifies and localizes 14 common pathologies (e.g., pneumothorax, consolidation) in CXRs, providing radiologists with bounding boxes and confidence scores to streamline their diagnostic workflow. 
 
-- **Status Quo (Non-ML):** In hospital radiology departments, radiologists manually interpret 50-100 CXRs daily, spending an average of 81 seconds per image (based on studies like the one referenced by our professor). This process relies entirely on human expertise, with no computational assistance. Fatigue and high workloads lead to missed pathologies, with error rates of 20-30% in demanding settings, as noted in clinical literature. The Unit 1 slides underscore this as a static, human-driven approach, lacking the scalability and validation that a production system could provide. The result is a time-intensive process prone to errors, impacting both efficiency and patient outcomes.
+Our system is an AI-assisted chest X-ray analysis system that uses YOLOv8 to both classify pathologies AND localize abnormalities with bounding boxes. The system works with the VinDr-CXR dataset, which contains annotations from multiple radiologists, enabling robust evaluation of AI assistance benefits.
 
-- **ML Solution:** Our system automates the initial analysis of CXRs using YOLOv11, trained on the VinBigData dataset ( ~205GB). It processes each image, delivering bounding boxes and scores that pinpoint abnormalities, allowing radiologists to focus their attention more effectively. By integrating into the existing radiology workflow via an API, our solution enhances rather than replaces the current service, addressing the professor’s requirement to avoid proposing a new business.
+Our system enhances radiologist workflow in hospital settings by:
+
+1. Reducing missed pathologies: The system identifies and highlights potential abnormalities that might be overlooked during routine reads, particularly during high-volume or fatigue periods.
+
+2. Improving reading efficiency: By pre-highlighting regions of concern, the system allows radiologists to focus their attention on suspicious areas, potentially reducing reading time.
+
+3. Serving as a "second opinion": The visual indicators of potential abnormalities provide radiologists with an automated consultation that can confirm findings or prompt reconsideration.
+
+The system maintains the radiologist as the ultimate decision-maker while providing assistive insights that improve diagnostic accuracy and workflow efficiency. Our evaluation will specifically measure how the AI assistance reduces pathology miss rates compared to unassisted radiologist performance.
+
+- **Status Quo (Non-ML):** In hospital radiology departments, radiologists manually interpret 50-100 CXRs daily, spending an average of a few minutes per image. This process relies entirely on human expertise, with no computational assistance. Fatigue and high workloads lead to missed pathologies, leading to an increase in error rates. 
+
+- **ML Solution:** Our system automates the initial analysis of CXRs using YOLOv11, trained on the VinBigData dataset (~205GB). It processes each image, delivering bounding boxes and scores that pinpoint abnormalities, allowing radiologists to focus their attention more effectively. By integrating into the existing radiology workflow via an API, our solution enhances rather than replaces the current service, addressing the professor’s requirement to avoid proposing a new business.
 
 - **Business Metrics:** We will be judged on two key performance indicators (KPIs) that tie directly to operational improvements in the radiology department to outperform the status quo on business-relevant metrics:
 
@@ -71,16 +82,16 @@ The table below shows an example, it is not a recommendation. -->
 
 ## UNIT 3: DevOps
 
-- **Infrastructure-as-Code (IaC):** We will define all infrastructure in code and store it in Git for version control and reproducibility. Terraform will be used to manage infrastructure on Chameleon, replacing manual configuration. This will include compute resources for YOLOv8 training and inference, networking, and storage for the VinDr-CXR dataset.
+- **Infrastructure-as-Code (IaC):** We will define all infrastructure in code and store it in Git for version control and reproducibility. Terraform will be used to manage infrastructure on Chameleon, replacing manual configuration. This will include compute resources for YOLOv11-L training and inference, networking, and storage for the VinDr-CXR dataset.
 
-- **Automated Setup:** We will use Ansible to automatically set up software on our systems, including CUDA drivers, PyTorch, and other dependencies for YOLOv8. All configurations will be stored in Git to ensure consistency across environments.
+- **Automated Setup:** We will use Ansible to automatically set up software on our systems, including CUDA drivers, PyTorch, and other dependencies for YOLOv11-L. All configurations will be stored in Git to ensure consistency across environments.
 
 
 - **Cloud-Native Design:** The project will follow cloud-native principles. Infrastructure will be immutable, meaning updates will be made by changing the code in Git and deploying new infrastructure. The system will use a microservices architecture, separating components like data preprocessing, model inference, and result storage into independent services that communicate through APIs. All services will run in Docker containers for consistent deployment.
 
 - **Staged Deployment:** We will implement three deployment environments: staging, canary, and production. Staging will be used for initial testing with sample X-ray images. Canary deployment will test changes on a small percentage of simulated X-ray traffic. Production will handle full-scale X-ray image analysis.
 
-- **Continuous Training:** Our pipeline will automatically train new YOLOv8 models when enough new data is collected. Models will be evaluated based on accuracy and false positive/negative rates. Promising models will be deployed to staging for further testing. We will use an MLflow server on Chameleon to track experiments.
+- **Continuous Training:** Our pipeline will automatically train new YOLOv11-L models when enough new data is collected. Models will be evaluated based on accuracy and false positive/negative rates. Promising models will be deployed to staging for further testing. We will use an MLflow server on Chameleon to track experiments.
 
 - **Testing Integration:** The pipeline will test performance with batches of X-rays in staging and compare results with previous models. Canary testing will simulate hospital workflows to validate performance under realistic conditions. Feedback from radiologists in production will trigger retraining if needed.
 
