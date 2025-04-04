@@ -23,10 +23,10 @@ link to their contributions in all repos here. -->
 | Name                            | Responsible for | Link to their commits in this repo |
 |---------------------------------|-----------------|------------------------------------|
 | All team members                |                 |                                    |
-| Team member 1                   |                 |                                    |
-| Team member 2                   |                 |                                    |
-| Team member 3                   |                 |                                    |
-| Team member 4 (if there is one) |                 |                                    |
+| Prashant Shihora                   |                 | https://github.com/theomthakur/ece-gy-9183-group19/commits/main/README.md?author=Mario928                                   |
+| Rigved Shirvalkar                   |                 | https://github.com/theomthakur/ece-gy-9183-group19/commits/main/README.md?author=rigvedrs                                    |
+| Om Thakur               |                 | https://github.com/theomthakur/ece-gy-9183-group19/commits/main/README.md?author=theomthakur                                   |
+| Sohith Bandari |                 | https://github.com/theomthakur/ece-gy-9183-group19/commits/main/README.md?author=Billa-Man                                   |
 
 
 
@@ -36,7 +36,6 @@ link to their contributions in all repos here. -->
 Must include: all the hardware, all the containers/software platforms, all the models, 
 all the data. -->
 
-### Summary of outside materials
 
 <!-- In a table, a row for each dataset, foundation model. 
 Name of data/model, conditions under which it was created (ideally with links/references), 
