@@ -21,17 +21,17 @@ The system maintains the radiologist as the ultimate decision-maker while provid
 	- **Radiologist efficiency** - Help radiologists spend less time reviewing each CXR
 	- **Diagnostic accuracy** - Help radiologists miss fewer pathologies
 
-- Following our manager Fraida Fund's (:) guidance, while we cannot implement a full business evaluation in our academic setting, we can evaluate "radiologists missing fewer pathologies" using the VinDr-CXR dataset:
-
- - We'll use images in our test set that were labeled by specific radiologists, compute their accuracy relative to consensus labels, and then simulate AI-assisted accuracy in two scenarios:
-
-	- Assuming radiologists follow all AI suggestions
-	- Assuming radiologists only follow AI input when they initially would have labeled the image as "no finding" but the AI detected a pathology
-
- - This approach allows us to estimate potential improvements in pathology detection without requiring clinical deployment.
-
- - For "reduced interpretation time," we would define a measurement plan for future implementation in a production environment, comparing baseline reading times against AI-assisted reading times.
- - We recognize that in practice, studies have shown radiologists sometimes ignore AI assistance and sometimes trust it too much even when incorrect. Our evaluation considers whether our system provides genuine improvement over the status quo of human-only interpretation.
+	- Following our manager Fraida Fund's (:) guidance, while we cannot implement a full business evaluation in our academic setting, we can evaluate "radiologists missing fewer pathologies" using the VinDr-CXR dataset:
+	
+	 - We'll use images in our test set that were labeled by specific radiologists, compute their accuracy relative to consensus labels, and then simulate AI-assisted accuracy in two scenarios:
+	
+		- Assuming radiologists follow all AI suggestions
+		- Assuming radiologists only follow AI input when they initially would have labeled the image as "no finding" but the AI detected a pathology
+	
+	 - This approach allows us to estimate potential improvements in pathology detection without requiring clinical deployment.
+	
+	 - For "reduced interpretation time," we would define a measurement plan for future implementation in a production environment, comparing baseline reading times against AI-assisted reading times.
+	 - We recognize that in practice, studies have shown radiologists sometimes ignore AI assistance and sometimes trust it too much even when incorrect. Our evaluation considers whether our system provides genuine improvement over the status quo of human-only interpretation.
 
 ## Contributors
 
