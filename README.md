@@ -26,10 +26,10 @@ link to their contributions in all repos here. -->
 | Name                            | Responsible for | Link to their commits in this repo |
 |---------------------------------|-----------------|------------------------------------|
 | All team members                |                 |                                    |
-| Prashant Shihora                   |                 | https://github.com/theomthakur/ece-gy-9183-group19/commits/main/README.md?author=Mario928                                   |
-| Rigved Shirvalkar                   |                 | https://github.com/theomthakur/ece-gy-9183-group19/commits/main/README.md?author=rigvedrs                                    |
-| Om Thakur               |                 | https://github.com/theomthakur/ece-gy-9183-group19/commits/main/README.md?author=theomthakur                                   |
-| Sohith Bandari |                 | https://github.com/theomthakur/ece-gy-9183-group19/commits/main/README.md?author=Billa-Man                                   |
+| Prashant Shihora                   |                 | [Commits] (https://github.com/theomthakur/ece-gy-9183-group19/commits/main/README.md?author=Mario928)                                   |
+| Rigved Shirvalkar                   |                 | [Commits] (https://github.com/theomthakur/ece-gy-9183-group19/commits/main/README.md?author=rigvedrs)                                    |
+| Om Thakur               |                 | [Commits] (https://github.com/theomthakur/ece-gy-9183-group19/commits/main/README.md?author=theomthakur)                                   |
+| Sohith Bandari |                 | [Commits] (https://github.com/theomthakur/ece-gy-9183-group19/commits/main/README.md?author=Billa-Man)                                   |
 
 
 
