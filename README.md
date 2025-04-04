@@ -2,7 +2,7 @@
 
 ## Value Proposition
 
-Our system is an AI-assisted chest X-ray analysis system that uses YOLOv11 to both classify pathologies AND localize abnormalities with bounding boxes. The system works with the VinDr-CXR dataset, which contains annotations from multiple radiologists, enabling robust evaluation of AI assistance benefits.
+Our system is an AI-assisted chest X-ray analysis system that uses YOLOv8 to both classify pathologies AND localize abnormalities with bounding boxes. The system works with the VinDr-CXR dataset, which contains annotations from multiple radiologists, enabling robust evaluation of AI assistance benefits.
 
 Our system enhances radiologist workflow in hospital settings by:
 
@@ -14,7 +14,7 @@ Our system enhances radiologist workflow in hospital settings by:
 
 The system maintains the radiologist as the ultimate decision-maker while providing assistive insights that improve diagnostic accuracy and workflow efficiency. Our evaluation will specifically measure how the AI assistance reduces pathology miss rates compared to unassisted radiologist performance.
 
-- **Status Quo (Non-ML):** In hospital radiology departments, radiologists manually interpret 50-100 CXRs daily, spending an average of a few minutes per image. This process relies entirely on human expertise, with no computational assistance. Fatigue and high workloads lead to missed pathologies, leading to an increase in error rates.
+- **Status Quo (Non-ML):** In hospital radiology departments, radiologists manually interpret 50-100 CXRs daily, spending an average of a few minutes per image. This process relies entirely on human expertise, with no computational assistance. Fatigue and high workloads lead to missed pathologies, leading to an increase in error rates. 
 
 - **ML Solution:** Our system automates the initial analysis of CXRs using YOLOv11, trained on the VinBigData dataset (~205GB). It processes each image, delivering bounding boxes and scores that pinpoint abnormalities, allowing radiologists to focus their attention more effectively. By integrating into the existing radiology workflow via an API, our solution enhances rather than replaces the current service, addressing the professor’s requirement to avoid proposing a new business.
 
@@ -73,10 +73,11 @@ The table below shows an example, it is not a recommendation. -->
 
 | Requirement     | How many/when                                     | Justification |
 |-----------------|---------------------------------------------------|---------------|
-| `m1.medium` VMs | 3 for entire project duration                     | ...           |
-| `gpu_mi100`     | 4 hour block twice a week                         |               |
-| Floating IPs    | 1 for entire project duration, 1 for sporadic use |               |
-| etc             |                                                   |               |
+| `compute_liqid` | 4x A100 GPUs                     | Required for training models           |
+| `gpu_p100`     | 1                        |          |
+| Floating IPs    | 2 | 1 for model serving API, 1 for monitoring |
+| Persistent Volume | 1 volume - 10GB | Model checkpoints, Retrained Models & Logs |
+| 
 
 ## Detailed design plan
 
@@ -117,7 +118,7 @@ We will conduct experiments comparing the total model training time using a sing
 
 ### EXTRA DIFFICULTY POINTS:
 
-- **Using Ray Train:** We will leverage Ray Train to implement robust distributed training with fault tolerance mechanisms that automatically restart failed training jobs on available workers. Our implementation will include configurable checkpointing with integration to MinIO deployed on Chameleon for efficient model persistence. We'll utilize Ray Train's scaling capabilities to distribute training across multiple nodes.
+- **Using Ray Train:** We will leverage Ray Train to implement robust distributed training with fault tolerance mechanisms that automatically restart failed training jobs on available workers. Our implementation will include configurable checkpointing with integration to MiniIO deployed on Chameleon for efficient model persistence. We'll utilize Ray Train's scaling capabilities to distribute training across multiple nodes.
 
 - **Scheduling hyperparameter tuning jobs:**  We will use Ray Tune's for hyperparameter search in comprehensive search spaces covering learning rates and optimization parameters (momentum, weight decay), network architecture choices and data augmentation configurations. 
 
@@ -197,7 +198,7 @@ Our final report will detail the system-level optimizations implemented, the con
 
 - **Offline Data Management:** For offline data management, the VinDr-CXR dataset, which includes chest X-rays and radiologist annotations, will be stored and organized. A simple folder structure will be created to separate the data into training, validation, and test splits. To ensure traceability and consistency, the data will be version-controlled to track any preprocessing changes or updates.
 
-- **ETL Pipeline:** The ETL pipeline will handle the end-to-end processing of the VinDr-CXR dataset. This pipeline will download and extract the dataset, resize images to match the format required by YOLOv11, and convert radiologist annotations into a YOLO-compatible format. It will also filter out corrupted or unusable images and save the processed data in a format ready for training. Additionally, a mechanism will be implemented to incorporate feedback data into the pipeline for retraining purposes.
+- **ETL Pipeline:** The ETL pipeline will handle the end-to-end processing of the VinDr-CXR dataset. This pipeline will download and extract the dataset, resize images to match the format required by YOLOv8, and convert radiologist annotations into a YOLO-compatible format. It will also filter out corrupted or unusable images and save the processed data in a format ready for training. Additionally, a mechanism will be implemented to incorporate feedback data into the pipeline for retraining purposes.
 
 - **Online Data:** To simulate online data usage, a simple script will be developed that sends X-ray images to the system at a realistic rate, mimicking real hospital scenarios. The script will include a mix of normal and abnormal cases. These images will undergo the same preprocessing steps as those used for training data to maintain consistency.
 
