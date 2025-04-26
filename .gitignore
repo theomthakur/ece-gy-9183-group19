@@ -1,0 +1,18 @@
+# Python
+*__pycache__/
+*.py[cod]
+.env
+.venv/
+.DS_Store
+
+# macOS
+.DS_Store
+
+# vscode
+/.vscode
+
+# Training
+./tmp
+
+# data
+vinbigdata-chest-xray-resized-png-1024x1024
