@@ -20,10 +20,10 @@ services:
     restart: unless-stopped
     # Note: GPU configuration is commented out for Mac compatibility
     # Uncomment for NVIDIA GPU server:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
