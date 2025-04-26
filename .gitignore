@@ -1,1 +1,5 @@
 .DS_Store
+*.pt
+__pycache__/
+.py[cod]
+*$py.class
