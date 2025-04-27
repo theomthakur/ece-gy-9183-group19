@@ -1,0 +1,38 @@
+version: '3'
+
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api/app:/app/app  # Mount only the app directory for hot reloading
+    environment:
+      - TRITON_SERVER_URL=triton_server:8000
+      - MODEL_NAME=chest_xray_detector
+    depends_on:
+      - triton_server
+    restart: unless-stopped
+    networks:
+      - xray_net
+
+  triton_server:
+    build:
+      context: ./triton
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"  # HTTP endpoint
+      - "8002:8001"  # GRPC endpoint
+      - "8003:8002"  # Metrics endpoint
+    volumes:
+      - ./models:/models  # Mount the models directory
+    restart: unless-stopped
+    # Remove GPU-specific configuration for Mac compatibility
+    networks:
+      - xray_net
+
+networks:
+  xray_net:
+    driver: bridge

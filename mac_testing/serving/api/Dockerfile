@@ -23,9 +23,10 @@ COPY . .
 ENV PYTHONPATH=/app
 ENV TRITON_SERVER_URL=triton_server:8000
 ENV MODEL_NAME=chest_xray_detector
+ENV PYTORCH_ENABLE_MPS_FALLBACK=1
 
 # Expose port
 EXPOSE 8000
 
 # Command to run the application with hot-reload enabled
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
