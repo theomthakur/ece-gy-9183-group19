@@ -6,3 +6,5 @@ torch
 torchvision
 onnx
 onnxruntime-gpu
+opencv-python-headless
+pydantic
