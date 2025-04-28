@@ -1,3 +1,60 @@
+data "openstack_networking_network_v2" "sharednet1" {
+  name = "sharednet1"
+}
+
+data "openstack_networking_subnet_v2" "sharednet1_subnet" {
+  name = "sharednet1-subnet"
+}
+
+data "openstack_networking_secgroup_v2" "allow_ssh" {
+  name = "allow-ssh"
+}
+
+data "openstack_networking_secgroup_v2" "allow_9001" {
+  name = "allow-9001"
+}
+
+data "openstack_networking_secgroup_v2" "allow_8000" {
+  name = "allow-8000"
+}
+
+data "openstack_networking_secgroup_v2" "allow_8080" {
+  name = "allow-8080"
+}
+
+data "openstack_networking_secgroup_v2" "allow_8081" {
+  name = "allow-8081"
+}
+
+data "openstack_networking_secgroup_v2" "allow_http_80" {
+  name = "allow-http-80"
+}
+
+data "openstack_networking_secgroup_v2" "allow_9090" {
+  name = "allow-9090"
+}
+
+variable "suffix" {
+  description = "Suffix for resource names (use net ID)"
+  type        = string
+  nullable = false
+}
+
+variable "key" {
+  description = "Name of key pair"
+  type        = string
+  default     = "id_rsa_chameleon"
+}
+
+variable "nodes" {
+  type = map(string)
+  default = {
+    "node1" = "192.168.1.11"
+    "node2" = "192.168.1.12"
+    "node3" = "192.168.1.13"
+  }
+}
+
 resource "openstack_networking_network_v2" "private_net" {
   name                  = "private-net-mlops-${var.suffix}"
   port_security_enabled = false
@@ -67,3 +124,11 @@ resource "openstack_networking_floatingip_v2" "floating_ip" {
   port_id     = openstack_networking_port_v2.sharednet1_ports["node1"].id
 }
 
+output "floating_ip_out" {
+  description = "Floating IP assigned to node1"
+  value       = openstack_networking_floatingip_v2.floating_ip.address
+}
+
+provider "openstack" {
+  cloud = "openstack"
+}
