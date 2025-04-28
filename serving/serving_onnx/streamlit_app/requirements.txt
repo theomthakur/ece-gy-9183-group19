@@ -1,10 +1,8 @@
-fastapi
-uvicorn
-numpy
-pillow
-torch
-torchvision
-onnx
-onnxruntime-gpu
+streamlit
+ultralytics
 opencv-python-headless
-pydantic
+tritonclient[all]
+pillow
+numpy
+plotly
+pandas

@@ -20,11 +20,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application code
 COPY . .
 
-# Ensure model file is available inside the container
-COPY model.onnx /app/
+# Expose Streamlit port
+EXPOSE 8501
 
-# Expose FastAPI port
-EXPOSE 8000
-
-# Command to run FastAPI
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Command to run Streamlit
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]

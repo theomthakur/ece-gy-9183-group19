@@ -1,28 +1,34 @@
-name: "chest_xray_detector"
-backend: "onnxruntime"
 max_batch_size: 8
-input [
-  {
-    name: "images"  # Input name from your YOLO model
-    data_type: TYPE_FP32
-    dims: [3, 640, 640]  # Standard YOLO input dimensions
+# Add metadata
+parameters {
+  key: "metadata"
+  value {
+    string_value: "%s"
   }
-]
-output [
-  {
-    name: "output0"  # Output name from your YOLO model
-    data_type: TYPE_FP32
-    dims: [84, 8400]  # YOLO output dimensions [84, 8400]
-  }
-]
-instance_group [
-  {
-    count: 1
-    kind: KIND_GPU
-    gpus: [ 0 ]
-  }
-]
-dynamic_batching {
-  preferred_batch_size: [1, 4, 8]
-  max_queue_delay_microseconds: 100000
 }
+
+# (Optional) Enable TensorRT for GPU inference
+# First run will be slow due to TensorRT engine conversion
+# optimization {
+#   execution_accelerators {
+#     gpu_execution_accelerator {
+#       name: "tensorrt"
+#       parameters {
+#         key: "precision_mode"
+#         value: "FP16"
+#       }
+#       parameters {
+#         key: "max_workspace_size_bytes"
+#         value: "3221225472"
+#       }
+#       parameters {
+#         key: "trt_engine_cache_enable"
+#         value: "1"
+#       }
+#       parameters {
+#         key: "trt_engine_cache_path"
+#         value: "/models/chest_xray/1"
+#       }
+#     }
+#   }
+# }
