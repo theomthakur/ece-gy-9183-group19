@@ -16,8 +16,8 @@ services:
       - "8000:8000"  # for HTTP requests
       - "8001:8001"  # for GRPC requests
       - "8002:8002"  # for reporting metrics
-    volumes:
-      - ./chest_xray_detector:/models/chest_xray_detector  # New model path
+    # volumes:
+    #   - ./chest_xray_detector:/models/chest_xray_detector  # New model path
 
   fastapi:
     build:
