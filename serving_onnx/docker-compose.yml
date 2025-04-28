@@ -2,8 +2,8 @@ name: triton_test
 services:
   triton_server:
     build:
-      context: ./docker
-      dockerfile: Dockerfile.triton
+      context: /home/cc/serving-monitoring/serving_onnx
+      dockerfile: docker/Dockerfile.triton
     container_name: triton_server
     deploy:
       resources:
