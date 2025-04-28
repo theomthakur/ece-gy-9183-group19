@@ -1,0 +1,53 @@
+name: triton_test
+services:
+  triton_server:
+    build:
+      context: /home/cc/serving-monitoring/serving_onnx
+      dockerfile: docker/Dockerfile.triton
+    container_name: triton_server
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ports:
+      - "8000:8000"  # for HTTP requests
+      - "8001:8001"  # for GRPC requests
+      - "8002:8002"  # for reporting metrics
+    # volumes:
+    #   - ./chest_xray_detector:/models/chest_xray_detector  # New model path
+
+  fastapi:
+    build:
+      context: ./fastapi_onnx
+      dockerfile: Dockerfile
+    container_name: fastapi_service
+    ports:
+      - "8080:8000"  # Map host 8080 to container 8000
+    depends_on:
+      - triton_server
+    environment:
+      - MODEL_PATH=/app/model.onnx
+
+  jupyter:
+    image: quay.io/jupyter/minimal-notebook:latest
+    container_name: jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - /home/cc/serving-monitoring/serving_onnx/workspace:/home/jovyan/work  # mount workspace
+    command: >
+      bash -c "python3 -m pip install bash_kernel tritonclient[all] && 
+               python3 -m bash_kernel.install && start-notebook.sh"
+
+  # flask:
+  #   build:
+  #     context: https://github.com/teaching-on-testbeds/gourmetgram.git#triton
+  #   container_name: flask
+  #   ports:
+  #     - "80:5000"
+  #   environment:
+  #     - TRITON_SERVER_URL=triton_server:8000  # let Flask app know where to access the inference endpoint
+  #     - CHEST_XRAY_MODEL_NAME=chest_xray_detector  # Update model name

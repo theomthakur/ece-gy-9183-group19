@@ -1,7 +1,0 @@
-# Add metadata
-parameters {
-  key: "metadata"
-  value {
-    string_value: "%s"
-  }
-}
