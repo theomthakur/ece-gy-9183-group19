@@ -3,7 +3,7 @@ max_batch_size: 8
 parameters {
   key: "metadata"
   value {
-    string_value: "%s"
+    string_value: "None"
   }
 }
 
