@@ -1,9 +1,47 @@
-data "openstack_networking_network_v2" "sharednet1" {
-  name = "sharednet1"
+// TERRAFORM VERSION AND PROVIDER REQUIREMENTS
+terraform {
+  required_version = ">= 0.14.0"
+  required_providers {
+    openstack = {
+      source  = "terraform-provider-openstack/openstack"
+      version = "~> 1.51.1"
+    }
+  }
 }
 
-data "openstack_networking_subnet_v2" "sharednet1_subnet" {
-  name = "sharednet1-subnet"
+// PROVIDER CONFIGURATION
+provider "openstack" {
+  cloud = "openstack"
+}
+
+// VARIABLES
+variable "suffix" {
+  description = "Suffix for resource names (your project number)"
+  type        = string
+  nullable = false
+}
+
+variable "key" {
+  description = "Name of key pair"
+  type        = string
+  default     = "id_rsa_chameleon"
+}
+
+// Modified: Reduced to just one node for simplicity
+variable "nodes" {
+  type = map(string)
+  default = {
+    "xray-node" = "192.168.1.11"
+  }
+}
+
+// DATA SOURCES
+data "openstack_networking_network_v2" "sharednet3" {
+  name = "sharednet3"
+}
+
+data "openstack_networking_subnet_v2" "sharednet3_subnet" {
+  name = "sharednet3-subnet"
 }
 
 data "openstack_networking_secgroup_v2" "allow_ssh" {
@@ -34,42 +72,24 @@ data "openstack_networking_secgroup_v2" "allow_9090" {
   name = "allow-9090"
 }
 
-variable "suffix" {
-  description = "Suffix for resource names (use net ID)"
-  type        = string
-  nullable = false
-}
-
-variable "key" {
-  description = "Name of key pair"
-  type        = string
-  default     = "id_rsa_chameleon"
-}
-
-variable "nodes" {
-  type = map(string)
-  default = {
-    "node1" = "192.168.1.11"
-    "node2" = "192.168.1.12"
-    "node3" = "192.168.1.13"
-  }
-}
-
+// MAIN RESOURCES
+// Modified: Changed names to reflect X-ray project
 resource "openstack_networking_network_v2" "private_net" {
-  name                  = "private-net-mlops-${var.suffix}"
+  name                  = "private-net-xray-project${var.suffix}"
   port_security_enabled = false
 }
 
 resource "openstack_networking_subnet_v2" "private_subnet" {
-  name       = "private-subnet-mlops-${var.suffix}"
+  name       = "private-subnet-xray-project${var.suffix}"
   network_id = openstack_networking_network_v2.private_net.id
   cidr       = "192.168.1.0/24"
   no_gateway = true
 }
 
+// Creating ports on the private network (kept original structure)
 resource "openstack_networking_port_v2" "private_net_ports" {
   for_each              = var.nodes
-  name                  = "port-${each.key}-mlops-${var.suffix}"
+  name                  = "port-${each.key}-xray-project${var.suffix}"
   network_id            = openstack_networking_network_v2.private_net.id
   port_security_enabled = false
 
@@ -79,10 +99,11 @@ resource "openstack_networking_port_v2" "private_net_ports" {
   }
 }
 
-resource "openstack_networking_port_v2" "sharednet1_ports" {
+// Creating ports on the shared network (kept original structure)
+resource "openstack_networking_port_v2" "sharednet3_ports" {
   for_each   = var.nodes
-    name       = "sharednet1-${each.key}-mlops-${var.suffix}"
-    network_id = data.openstack_networking_network_v2.sharednet1.id
+    name       = "sharednet3-${each.key}-xray-project${var.suffix}"
+    network_id = data.openstack_networking_network_v2.sharednet3.id
     security_group_ids = [
       data.openstack_networking_secgroup_v2.allow_ssh.id,
       data.openstack_networking_secgroup_v2.allow_9001.id,
@@ -94,16 +115,17 @@ resource "openstack_networking_port_v2" "sharednet1_ports" {
     ]
 }
 
+// Create VM instances
 resource "openstack_compute_instance_v2" "nodes" {
   for_each = var.nodes
 
-  name        = "${each.key}-mlops-${var.suffix}"
+  name        = "${each.key}-xray-project${var.suffix}"
   image_name  = "CC-Ubuntu24.04"
   flavor_name = "m1.medium"
   key_pair    = var.key
 
   network {
-    port = openstack_networking_port_v2.sharednet1_ports[each.key].id
+    port = openstack_networking_port_v2.sharednet3_ports[each.key].id
   }
 
   network {
@@ -112,23 +134,39 @@ resource "openstack_compute_instance_v2" "nodes" {
 
   user_data = <<-EOF
     #! /bin/bash
-    sudo echo "127.0.1.1 ${each.key}-mlops-${var.suffix}" >> /etc/hosts
+    sudo echo "127.0.1.1 ${each.key}-xray-project${var.suffix}" >> /etc/hosts
     su cc -c /usr/local/bin/cc-load-public-keys
   EOF
-
 }
 
+// Added: Storage volume for X-ray data and models
+resource "openstack_blockstorage_volume_v2" "xray_storage" {
+  name        = "xray-storage-project${var.suffix}"
+  size        = 10
+  description = "Storage for X-ray detection system data and models"
+}
+
+// Added: Attach volume to VM instance
+resource "openstack_compute_volume_attach_v2" "xray_volume_attach" {
+  instance_id = openstack_compute_instance_v2.nodes["xray-node"].id
+  volume_id   = openstack_blockstorage_volume_v2.xray_storage.id
+}
+
+// Create floating IP
 resource "openstack_networking_floatingip_v2" "floating_ip" {
   pool        = "public"
-  description = "MLOps IP for ${var.suffix}"
-  port_id     = openstack_networking_port_v2.sharednet1_ports["node1"].id
+  description = "X-ray Detection System IP for project${var.suffix}"
+  port_id     = openstack_networking_port_v2.sharednet3_ports["xray-node"].id
 }
 
+// OUTPUTS
 output "floating_ip_out" {
-  description = "Floating IP assigned to node1"
+  description = "Floating IP assigned to X-ray node"
   value       = openstack_networking_floatingip_v2.floating_ip.address
 }
 
-provider "openstack" {
-  cloud = "openstack"
+// Added: Output for the volume ID
+output "storage_volume_id" {
+  description = "ID of the storage volume for X-ray data"
+  value       = openstack_blockstorage_volume_v2.xray_storage.id
 }
