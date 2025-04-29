@@ -33,12 +33,11 @@ services:
       - CHEST_XRAY_MODEL_NAME=chest_xray_detector
 
   jupyter:
-    image: quay.io/jupyter/minimal-notebook:latest
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.jupyter
     container_name: jupyter
     ports:
       - "8888:8888"
     volumes:
-      - /home/cc/serving-monitoring/serving_onnx/workspace:/home/jovyan/work  # mount workspace
-    command: >
-      bash -c "python3 -m pip install bash_kernel tritonclient[all] && 
-               python3 -m bash_kernel.install && start-notebook.sh"
+      - /home/cc/serving-monitoring/serving_onnx/workspace:/home/jovyan/workspace  # mount workspace
