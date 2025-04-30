@@ -10,7 +10,7 @@ from PIL import Image
 TRITON_SERVER_URL = os.getenv("TRITON_SERVER_URL", "triton_server:8000")
 MODEL_NAME = os.getenv("CHEST_XRAY_MODEL_NAME", "chest_xray_detector")
 
-st.title("Chest X-Ray Detection with YOLOV11")
+st.title("Chest X-Ray Detection using YOLOV11")
 
 # Server URL input (can use environment variable)
 server_url = st.text_input("Triton Server URL", value=TRITON_SERVER_URL)
