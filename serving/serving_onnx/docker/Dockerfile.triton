@@ -1,6 +1,11 @@
 # Use NVIDIA Triton base image
 FROM nvcr.io/nvidia/tritonserver:24.10-py3
 
+# Install system dependencies for OpenCV
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install necessary dependencies
 RUN pip install --no-cache-dir \
     pillow \

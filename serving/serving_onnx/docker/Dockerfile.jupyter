@@ -4,7 +4,7 @@ USER root
 
 # Install system dependencies for OpenCV
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir \
     bash_kernel \
     tritonclient[all] \
-    ultralytics==8.3.119 \
+    ultralytics \
     opencv-python-headless \
     pillow \
     numpy \
