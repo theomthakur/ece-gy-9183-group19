@@ -34,10 +34,10 @@ services:
 
   jupyter:
     build:
-      context: ./docker
-      dockerfile: Dockerfile.jupyter
+      context: .
+      dockerfile: ./docker/Dockerfile.jupyter
     container_name: jupyter
     ports:
       - "8888:8888"
-    volumes:
-      - /home/cc/serving-monitoring/serving_onnx/workspace:/home/jovyan/workspace  # mount workspace
+    # volumes:
+    #   - /home/cc/serving-monitoring/serving_onnx/workspace:/home/jovyan/workspace  # mount workspace

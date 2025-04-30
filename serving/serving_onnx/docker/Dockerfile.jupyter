@@ -21,14 +21,13 @@ RUN pip install --no-cache-dir \
     numpy \
     matplotlib
 
+COPY ./workspace/ /home/jovyan/work/
+
 # Install bash kernel
 RUN python -m bash_kernel.install
 
-# Switch back to jovyan user
-USER ${NB_UID}
-
 # Set working directory
-WORKDIR "${HOME}/work"
+WORKDIR "${HOME}/"
 
 # Default command to start the notebook server
 CMD ["start-notebook.sh"]
