@@ -1,0 +1,237 @@
+name: vinbigdata-etl
+
+volumes:
+  vinbigdata:
+
+services:
+  extract-data:
+    container_name: etl_extract_data
+    image: python:3.11
+    user: root
+    volumes:
+      - vinbigdata:/data
+      - /home/cc/.kaggle/kaggle.json:/root/.kaggle/kaggle.json
+    working_dir: /data
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+
+        echo "Setting up Kaggle directory and permissions..."
+        mkdir -p /root/.kaggle
+        chmod 600 /root/.kaggle/kaggle.json
+
+        echo "Updating package lists and installing dependencies..."
+        apt-get update
+        apt-get install -y 7zip
+
+        echo "Installing Kaggle CLI..."
+        pip install kaggle
+
+        echo "Resetting dataset directory..."
+        rm -rf vinbigdata
+        mkdir -p vinbigdata
+        cd vinbigdata
+
+        echo "Downloading dataset from Kaggle..."
+        kaggle competitions download -c vinbigdata-chest-xray-abnormalities-detection
+
+        echo "Extracting dataset..."
+        unzip -o vinbigdata-chest-xray-abnormalities-detection.zip
+        rm -rf vinbigdata-chest-xray-abnormalities-detection.zip
+
+        echo "Listing contents of /data after extract stage:"
+        ls -l /data
+
+  transform-data:
+    container_name: etl_transform_data
+    image: python:3.11
+    volumes:
+      - vinbigdata:/data
+    working_dir: /data/vinbigdata
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+        echo "Installing required packages..."
+        pip install kaggle pydicom pillow tqdm numpy
+        
+        echo "Creating DICOM preprocessing script..."
+        cat > preprocess.py << 'EOF'
+        import os
+        import numpy as np
+        import pydicom
+        from pydicom.pixel_data_handlers.util import apply_voi_lut
+        from PIL import Image
+        from tqdm import tqdm
+        from multiprocessing import Pool, cpu_count
+
+        def read_xray(path, voi_lut=True, fix_monochrome=True):
+            dicom = pydicom.dcmread(path)
+            if voi_lut:
+                data = apply_voi_lut(dicom.pixel_array, dicom)
+            else:
+                data = dicom.pixel_array
+            if fix_monochrome and dicom.PhotometricInterpretation == "MONOCHROME1":
+                data = np.amax(data) - data
+            data = data - np.min(data)
+            data = data / np.max(data)
+            data = (data * 255).astype(np.uint8)
+            return data
+
+        def process_file(args):
+            dicom_path, output_dir = args
+            try:
+                img_data = read_xray(dicom_path)
+                img = Image.fromarray(img_data)
+                # Use the base filename, change extension to .png
+                base = os.path.splitext(os.path.basename(dicom_path))[0]
+                output_path = os.path.join(output_dir, base + '.png')
+                img.save(output_path)
+                return output_path
+            except Exception as e:
+                print(f"Error processing {dicom_path}: {e}")
+                return None
+
+        def main(input_directory, output_directory):
+            if not os.path.exists(output_directory):
+                os.makedirs(output_directory)
+            # Gather all DICOM files
+            dicom_files = [
+                os.path.join(input_directory, f)
+                for f in os.listdir(input_directory)
+                if f.endswith('.dicom') or f.endswith('.dcm')
+            ]
+            args_list = [(f, output_directory) for f in dicom_files]
+            
+            # Use all available CPU cores
+            processed_files = []
+            with Pool(cpu_count()) as pool:
+                results = list(tqdm(pool.imap_unordered(process_file, args_list), 
+                                  total=len(args_list), 
+                                  desc="Processing DICOM images"))
+                processed_files = [f for f in results if f is not None]
+            
+            return processed_files
+        EOF
+        
+        echo "Running DICOM preprocessing..."
+        python3 -c '
+        import os
+        import shutil
+        import random
+        from preprocess import main
+        
+        # First, preprocess DICOM images to PNG
+        train_input_directory = "train"
+        train_output_directory = "data/train"
+        test_input_directory = "test"
+        test_output_directory = "data/test"
+        
+        # Make sure directories exist
+        os.makedirs(train_output_directory, exist_ok=True)
+        os.makedirs(test_output_directory, exist_ok=True)
+        
+        print("Processing training DICOM images...")
+        train_files = main(train_input_directory, train_output_directory)
+        print(f"Processed {len(train_files)} training images")
+        
+        print("Processing test DICOM images...")
+        test_files = main(test_input_directory, test_output_directory)
+        print(f"Processed {len(test_files)} test images")
+        
+        # Now organize processed images into splits
+        output_base_dir = "data/organized"
+        splits = {
+            "training": {"labeled": 11250, "unlabeled": 0},
+            "validation": {"labeled": 750, "unlabeled": 0},
+            "test": {"labeled": 750, "unlabeled": 0},
+            "staging": {"labeled": 1000, "unlabeled": 1000},
+            "canary": {"labeled": 500, "unlabeled": 1000},
+            "production": {"labeled": 500, "unlabeled": 1000}
+        }
+        
+        flat_structure_splits = ["training", "validation", "test"]
+        subdir_splits = ["staging", "canary", "production"]
+        
+        for split_name in splits.keys():
+            os.makedirs(os.path.join(output_base_dir, split_name), exist_ok=True)
+            if split_name in subdir_splits:
+                os.makedirs(os.path.join(output_base_dir, split_name, "labeled"), exist_ok=True)
+                os.makedirs(os.path.join(output_base_dir, split_name, "unlabeled"), exist_ok=True)
+        
+        labeled_files = []
+        for file in os.listdir(train_output_directory):
+            if os.path.isfile(os.path.join(train_output_directory, file)):
+                labeled_files.append(file)
+        
+        random.shuffle(labeled_files)
+        labeled_used = 0
+        
+        for split_name, counts in splits.items():
+            labeled_count = counts["labeled"]
+            if labeled_count > 0:
+                split_files = labeled_files[labeled_used:labeled_used + labeled_count]
+                labeled_used += labeled_count
+                for file in split_files:
+                    src = os.path.join(train_output_directory, file)
+                    if split_name in flat_structure_splits:
+                        dst = os.path.join(output_base_dir, split_name, file)
+                    else:
+                        dst = os.path.join(output_base_dir, split_name, "labeled", file)
+                    shutil.copy(src, dst)
+        
+        unlabeled_files = []
+        for file in os.listdir(test_output_directory):
+            if os.path.isfile(os.path.join(test_output_directory, file)):
+                unlabeled_files.append(file)
+        
+        random.shuffle(unlabeled_files)
+        unlabeled_used = 0
+        
+        for split_name, counts in splits.items():
+            unlabeled_count = counts["unlabeled"]
+            if unlabeled_count > 0:
+                split_files = unlabeled_files[unlabeled_used:unlabeled_used + unlabeled_count]
+                unlabeled_used += unlabeled_count
+                for file in split_files:
+                    src = os.path.join(test_output_directory, file)
+                    dst = os.path.join(output_base_dir, split_name, "unlabeled", file)
+                    shutil.copy(src, dst)
+        
+        print(f"Data organization complete. Used {labeled_used} labeled files and {unlabeled_used} unlabeled files.")
+        '
+        
+        echo "Listing final directory structure:"
+        find /data/vinbigdata/data -type d | sort
+
+  load-data:
+    container_name: etl_load_data
+    image: rclone/rclone:latest
+    volumes:
+      - vinbigdata:/data
+      - ~/.config/rclone/rclone.conf:/root/.config/rclone/rclone.conf:ro
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -e
+        if [ -z "$RCLONE_CONTAINER" ]; then
+          echo "ERROR: RCLONE_CONTAINER is not set"
+          exit 1
+        fi
+        echo "Cleaning up existing contents of container..."
+        rclone delete chi_tacc:$RCLONE_CONTAINER --rmdirs || true
+        
+        echo "Copying organized chest X-ray data to storage container..."
+        rclone copy /data/vinbigdata/data/organized chi_tacc:$RCLONE_CONTAINER \
+          --progress \
+          --transfers=32 \
+          --checkers=16 \
+          --multi-thread-streams=4 \
+          --fast-list
+        
+        echo "Listing directories in container after load stage:"
+        rclone lsd chi_tacc:$RCLONE_CONTAINER
