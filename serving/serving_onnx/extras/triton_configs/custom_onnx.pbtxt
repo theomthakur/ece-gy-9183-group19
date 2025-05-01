@@ -1,0 +1,37 @@
+name: "chest_xray_detector"
+platform: "onnxruntime_onnx"
+max_batch_size: 32
+input [
+  {
+    name: "images"
+    data_type: TYPE_FP32
+    dims: [3, -1, -1]
+  }
+]
+output [
+  {
+    name: "output0"
+    data_type: TYPE_FP32
+    dims: [84, -1]
+  }
+]
+dynamic_batching {
+  preferred_batch_size: [4, 8, 16]
+  max_queue_delay_microseconds: 100
+}
+instance_group [
+  {
+    count: 1
+    kind: KIND_GPU  # Use KIND_CPU if no GPU
+    gpus: [ 0 ]
+  }
+]
+optimization {
+  execution_accelerators {
+    gpu_execution_accelerator: [
+      {
+        name: "cuda"
+      }
+    ]
+  }
+}
