@@ -23,7 +23,7 @@ optimization {
       }
       parameters {
         key: "trt_engine_cache_path"
-        value: "/models/chest_xray/1"
+        value: "/models/chest_xray_detector/1"
       }
     }
   }
