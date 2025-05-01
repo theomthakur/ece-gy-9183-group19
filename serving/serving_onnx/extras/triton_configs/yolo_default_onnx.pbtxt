@@ -1,0 +1,8 @@
+#max_batch_size: 8
+# Add metadata
+parameters {
+  key: "metadata"
+  value {
+    string_value: "None"
+  }
+}

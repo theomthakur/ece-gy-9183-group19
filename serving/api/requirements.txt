@@ -1,8 +1,0 @@
-fastapi
-uvicorn
-pydantic
-pillow
-numpy
-pandas
-python-multipart
-ultralytics

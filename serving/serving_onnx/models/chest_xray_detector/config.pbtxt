@@ -1,0 +1,29 @@
+parameters {
+  key: "metadata"
+  value {
+    string_value: "None"
+  }
+}
+optimization {
+  execution_accelerators {
+    gpu_execution_accelerator {
+      name: "tensorrt"
+      parameters {
+        key: "precision_mode"
+        value: "FP16"
+      }
+      parameters {
+        key: "max_workspace_size_bytes"
+        value: "8589934592"
+      }
+      parameters {
+        key: "trt_engine_cache_enable"
+        value: "1"
+      }
+      parameters {
+        key: "trt_engine_cache_path"
+        value: "/models/chest_xray_detector/1"
+      }
+    }
+  }
+}
