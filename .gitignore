@@ -1,4 +1,21 @@
+# Python
+*__pycache__/
+*.py[cod]
+.env
+.venv/
 .DS_Store
-__pycache__/
-.py[cod]
-*$py.class
+
+# macOS
+.DS_Store
+
+# vscode
+/.vscode
+
+# Training
+./tmp
+
+# data
+vinbigdata
+yolo_dataset
+weights
+runs
