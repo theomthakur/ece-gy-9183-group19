@@ -1,0 +1,77 @@
+name: triton_test
+services:
+  triton_server:
+    build:
+      context: /home/cc/serving-monitoring/serving/serving_onnx
+      dockerfile: docker/Dockerfile.triton
+    container_name: triton_server
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ports:
+      - "8000:8000"  # for HTTP requests
+      - "8001:8001"  # for GRPC requests
+      - "8002:8002"  # for reporting metrics
+    volumes:
+      - ./models:/models  # Mount models directory
+
+  streamlit:
+    build:
+      context: ./streamlit_app
+      dockerfile: Dockerfile
+    container_name: streamlit_service
+    ports:
+      - "8501:8501"  # Map host 8501 to container 8501
+    depends_on:
+      - triton_server
+    environment:
+      - TRITON_SERVER_URL=triton_server:8000
+      - CHEST_XRAY_MODEL_NAME=chest_xray_detector
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./Monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    privileged: true
+
+  jupyter:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.jupyter
+    container_name: jupyter
+    ports:
+      - "8888:8888"
+    # volumes:
+    #   - /home/cc/serving-monitoring/serving_onnx/workspace:/home/jovyan/workspace  # mount workspace

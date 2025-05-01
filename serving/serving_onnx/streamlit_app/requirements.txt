@@ -1,0 +1,8 @@
+streamlit
+ultralytics
+opencv-python-headless
+tritonclient[all]
+pillow
+numpy
+plotly
+pandas
