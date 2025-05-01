@@ -93,9 +93,9 @@ The table below shows an example, it is not a recommendation. -->
 
 ## UNIT 3: DevOps
 
-- **Infrastructure-as-Code (IaC):** We will define all infrastructure in code and store it in Git for version control and reproducibility. Terraform will be used to manage infrastructure on Chameleon, replacing manual configuration. This will include compute resources for YOLOv11-L training and inference, networking, and storage for the VinDr-CXR dataset.
+- **Infrastructure-as-Code (IaC):** We will define all infrastructure in code and store it in Git for version control and reproducibility. Terraform will be used to manage infrastructure on Chameleon, replacing manual configuration. This will include compute resources for YOLOv11-L training and inference, networking, and storage for the VinDr-CXR dataset. The Terraform files are located in the `iac/tf` directory.
 
-- **Automated Setup:** We will use Ansible to automatically set up software on our systems, including CUDA drivers, PyTorch, and other dependencies for YOLOv11-L. All configurations will be stored in Git to ensure consistency across environments.
+- **Automated Setup:** We will use Ansible to automatically set up software on our systems, including CUDA drivers, PyTorch, and other dependencies for YOLOv11-L. All configurations will be stored in Git to ensure consistency across environments. The Ansible playbooks are located in the `iac/ansible` directory.
 
 
 - **Cloud-Native Design:** The project will follow cloud-native principles. Infrastructure will be immutable, meaning updates will be made by changing the code in Git and deploying new infrastructure. The system will use a microservices architecture, separating components like data preprocessing, model inference, and result storage into independent services that communicate through APIs. All services will run in Docker containers for consistent deployment.
