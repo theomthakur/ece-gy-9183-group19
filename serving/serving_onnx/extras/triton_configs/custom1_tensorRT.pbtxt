@@ -1,9 +1,21 @@
+max_batch_size: 16
 parameters {
   key: "metadata"
   value {
     string_value: "None"
   }
 }
+dynamic_batching {
+  preferred_batch_size: [4, 8, 16]
+  max_queue_delay_microseconds: 100
+}
+instance_group [
+  {
+    count: 2
+    kind: KIND_GPU
+    gpus: [0]
+  }
+]
 optimization {
   execution_accelerators {
     gpu_execution_accelerator {
