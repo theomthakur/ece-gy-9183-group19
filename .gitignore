@@ -15,4 +15,7 @@
 ./tmp
 
 # data
-vinbigdata-chest-xray-resized-png-1024x1024
+vinbigdata
+yolo_dataset
+weights
+runs

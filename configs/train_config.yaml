@@ -1,0 +1,52 @@
+# Data configuration
+data_csv: data/train.csv
+images_dir: data/train
+output_dir: runs/finetune
+yolo_data_dir: yolo_dataset
+weights_dir: weights
+
+# Model configuration
+model_name: yolo12n  # Base model name
+pretrained: true     # Use pretrained weights
+
+# Training parameters
+epochs: 50
+batch_size: 16
+img_size: 640
+device: cuda
+workers: 8
+val_split: 0.2
+seed: 42
+patience: 10         # Early stopping patience
+
+# Augmentation parameters
+hsv_h: 0.0
+hsv_s: 0.0
+hsv_v: 0.0
+translate: 0.0
+scale: 0.0
+fliplr: 0.0
+mosaic: 0.0
+auto_augment: null
+erasing: 0.0
+
+# Ray configuration
+ray_address: ray://ray-head:6379
+num_workers: 2
+use_gpu: true
+cpus_per_worker: 4
+gpus_per_worker: 1
+
+# MLflow configuration
+mlflow_tracking_uri: http://mlflow:5000
+experiment_name: yolo-training
+
+# Checkpoint configuration
+checkpoint_dir: checkpoints
+save_freq: 5
+
+# Hyperparameter tuning
+tune_trials: 10
+tune_resources:
+  cpu: 4
+  gpu: 1

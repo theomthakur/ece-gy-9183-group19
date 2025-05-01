@@ -108,7 +108,7 @@ def train_yolo(config: Dict[Any, Any], checkpoint_dir=None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="YOLOv11-L Hyperparameter Tuning")
+    parser = argparse.ArgumentParser(description="YOLO12X Hyperparameter Tuning")
     parser.add_argument(
         "--config", 
         type=str, 
@@ -218,7 +218,7 @@ def main():
         ),
 
         run_config=ray.train.RunConfig(
-            name="yolov11_vindr_cxr_tuning",
+            name="yolo12_vindr_cxr_tuning",
             progress_reporter=reporter,
 
             checkpoint_config=ray.train.CheckpointConfig(
