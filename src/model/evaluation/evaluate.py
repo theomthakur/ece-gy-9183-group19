@@ -13,7 +13,7 @@ import numpy as np
 # Add the project root to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.training.config import Config
-from yolo import create_data_yaml
+from src.yolo import create_data_yaml
 from ultralytics import YOLO
 
 def evaluate_model(model_path: str, yaml_path: str, output_dir: str, 

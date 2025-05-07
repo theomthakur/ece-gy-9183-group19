@@ -17,7 +17,7 @@ from ray.train.torch import TorchConfig
 # Add the project root to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import Config
-from yolo import load_dataset, download_yolo_weights
+from src.yolo import load_dataset, download_yolo_weights
 
 def train_func(config_dict: Dict[str, Any]):
     """
