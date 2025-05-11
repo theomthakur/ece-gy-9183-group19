@@ -15,7 +15,9 @@
 ./tmp
 
 # data
-vinbigdata
-yolo_dataset
+datasets
 weights
 runs
+
+# imp
+.env
