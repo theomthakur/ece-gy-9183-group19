@@ -2,7 +2,7 @@ yolo_data_dir: './datasets'
 output_dir: './runs'
 weights_dir: './weights'
 model_name: 'yolo12n'
-epochs: 1
+epochs: 50
 batch_size: 0.8
 img_size: 640
 device: 'cuda'

@@ -1,0 +1,13 @@
+numpy==1.26.4
+pyyaml
+onnx
+onnxruntime
+onnxruntime-gpu
+python-dotenv
+mlflow
+ultralytics
+prefect
+uvicorn
+python-multipart
+fastapi
+pydantic
