@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, File, UploadFile, F
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from prefect import flow, task, get_run_logger
+from prefect.cache_policies import NO_CACHE
 from mlflow.tracking import MlflowClient
 from ultralytics import YOLO
 from dotenv import load_dotenv
@@ -58,7 +59,7 @@ class TrainingConfig(BaseModel):
     model_name: str = MODEL_NAME
     config_path: str = CONFIG_PATH
 
-@task(name="load_model")
+@task(name="load_model", cache_policy=NO_CACHE)
 def load_and_train_model(config: TrainingConfig):
     logger = get_run_logger()
     logger.info(f"Training {config.model_name} for {config.epochs} epochs...")
@@ -147,7 +148,7 @@ def load_and_train_model(config: TrainingConfig):
         logger.error(f"Error during model training: {str(e)}")
         raise e
 
-@task(name="export_model")
+@task(name="export_model", cache_policy=NO_CACHE)
 def export_model_formats(model, run_dir, img_size):
     logger = get_run_logger()
     logger.info("Exporting model to additional formats...")
@@ -179,7 +180,7 @@ def export_model_formats(model, run_dir, img_size):
     
     return results
 
-@task(name="evaluate_model")
+@task(name="evaluate_model", cache_policy=NO_CACHE)
 def evaluate_model(model, run_dir=None):
     logger = get_run_logger()
     logger.info("Evaluating model on validation set...")
