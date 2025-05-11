@@ -1,0 +1,21 @@
+yolo_data_dir: './datasets'
+output_dir: './runs'
+weights_dir: './weights'
+model_name: 'yolo12n'
+epochs: 1
+batch_size: 0.8
+img_size: 640
+device: 'cuda'
+workers: 8
+seed: 42
+
+# Optional augmentation parameters - can be adjusted
+hsv_h: 0.0
+hsv_s: 0.0
+hsv_v: 0.0
+translate: 0.0
+scale: 0.0
+fliplr: 0.0
+mosaic: 0.0
+auto_augment: None
+erasing: 0.0

@@ -1,0 +1,33 @@
+services:
+  yolo-trainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yolo-trainer
+    shm_size: 96G
+    volumes:
+      - ./datasets:/app/datasets
+      - yolo_runs:/app/runs
+      - yolo_weights:/app/weights
+      - ./config:/app/config
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+      - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BUCKET_NAME=mlflow-artifacts
+      - YOLO_CONFIG_DIR=/app/config/ultralytics
+
+volumes:
+  yolo_runs:
+    driver: local
+  yolo_weights:
+    driver: local

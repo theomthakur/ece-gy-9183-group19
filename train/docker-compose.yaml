@@ -1,0 +1,42 @@
+services:
+  # YOLO Training API Service
+  yolo-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yolo-api
+    shm_size: 96G
+    volumes:
+      - ./datasets:/app/datasets
+      - yolo_weights:/app/weights
+      - yolo_runs:/app/runs
+      - ./config:/app/config
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - MLFLOW_TRACKING_URI=http://129.114.26.124:8000
+      - MLFLOW_EXPERIMENT_NAME=YOLO12-Training
+      - SERVICE_PORT=8000
+      - CONFIG_PATH=/app/config/config.yaml
+      - DATA_PATH=/app/config/data.yaml
+      - MODEL_PATH=/app/weights/yolo12n.pt
+      - OUTPUT_DIR=/app/runs
+      - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BUCKET_NAME=mlflow-artifacts
+
+
+volumes:
+  yolo_runs:
+    driver: local
+  yolo_weights:
+    driver: local
