@@ -162,6 +162,41 @@ services:
     networks:
       - yolo_ray_network
 
+  yolo-ray-retrain:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yolo-ray-retrain
+    depends_on:
+      - ray-head-ray
+    volumes:
+      - /mnt/object:/app/datasets
+      - yolo_ray_runs:/app/runs
+      - yolo_ray_weights:/app/weights
+      - ./config:/app/config
+    environment:
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+      - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BUCKET_NAME=mlflow-artifacts
+      - YOLO_CONFIG_DIR=/app/config/ultralytics
+      - RAY_ADDRESS=ray://ray-head-ray:6379
+      - RAY_HEAD_ADDRESS=ray-head-ray:6379
+    profiles:
+      - retraining
+    command: >
+      python3 -u /app/yolo_ray_main.py
+        --config /app/config/config.yaml
+        --data /app/config/data.yaml
+        --experiment "YOLO12-Ray-Retraining"
+        --mode retrain
+        --model_path /app/runs/YOLO12-Ray-Training/weights/best.pt
+    stdin_open: true
+    tty: true
+    networks:
+      - yolo_ray_network
+
 volumes:
   grafana_ray_storage:
   ray_ray_tmp:
