@@ -610,7 +610,7 @@ def ml_pipeline_flow(config: TrainingConfig):
         logger.info(f"MLflow URI: {mlflow_uri}")
         experiment_id = None
     
-    with mlflow.start_run(experiment_id=experiment_id, run_name=f"{config.model_name}-train"):
+    with mlflow.start_run(experiment_id=experiment_id, run_name=f"{config.model_name}-train", log_system_metrics=True):
         logger.info("MLflow run started")
         
         mlflow.log_param("mlflow_server", mlflow_uri)
@@ -652,7 +652,7 @@ def finetune_pipeline_flow(config: FinetuningConfig):
         logger.error(f"Error setting up MLflow experiment: {str(e)}")
         experiment_id = None
     
-    with mlflow.start_run(experiment_id=experiment_id, run_name=f"{config.model_name}-finetune"):
+    with mlflow.start_run(experiment_id=experiment_id, run_name=f"{config.model_name}-finetune", log_system_metrics=True):
         logger.info("MLflow run started for fine-tuning")
         
         model_path, base_version = get_latest_model(config.model_name, config.alias)

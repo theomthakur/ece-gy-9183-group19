@@ -1,0 +1,9 @@
+pyyaml
+onnx
+onnxruntime
+onnxruntime-gpu
+python-dotenv
+mlflow
+ultralytics
+numpy==1.26.4
+tenacity

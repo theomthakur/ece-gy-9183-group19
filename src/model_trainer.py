@@ -73,7 +73,7 @@ def log_model_to_mlflow(model, config, metrics, experiment_id, config_path, yaml
        if experiment_id:
            mlflow.set_experiment(experiment_id=experiment_id)
        
-       with mlflow.start_run(run_name=run_name):
+       with mlflow.start_run(run_name=run_name, log_system_metrics=True):
            print(f"Started MLflow run: {run_name}")
            
            mlflow.log_param("model_name", config['model_name'])

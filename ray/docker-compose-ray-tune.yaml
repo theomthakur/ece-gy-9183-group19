@@ -1,0 +1,174 @@
+name: ray_tune
+
+services:
+  minio-tune:
+    image: minio/minio
+    container_name: minio-tune
+    restart: always
+    expose:
+      - "9000"
+    ports:  
+      - "9002:9000" 
+      - "9003:9001"  
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY}
+    healthcheck:
+      test: timeout 5s bash -c ':> /dev/tcp/127.0.0.1/9000' || exit 1
+      interval: 1s
+      timeout: 10s
+      retries: 5
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_tune_data:/data 
+      
+  minio-create-bucket-tune:
+    image: minio/mc
+    depends_on:
+      minio-tune:
+        condition: service_healthy
+    container_name: minio-create-bucket-tune
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set minio http://minio-tune:9000 ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY} &&
+      if ! mc ls minio/mlflow-artifacts; then
+        mc mb minio/mlflow-artifacts &&
+        echo 'Bucket mlflow-artifacts created'
+      else
+        echo 'Bucket mlflow-artifacts already exists';
+      fi"
+
+  ray-head-tune:
+    image: rayproject/ray:2.42.1
+    container_name: ray-head-tune
+    command: |
+      /bin/sh -c "
+      mkdir -p /tmp/ray && 
+      chown -R root:root /tmp/ray &&
+      ray metrics launch-prometheus &&
+      ray start --head --port=6379 --dashboard-host=0.0.0.0 --block --metrics-export-port=8080"
+    ports:
+      - "6380:6379" 
+      - "8266:8265" 
+      - "8082:8081" 
+      - "8091:8090" 
+      - "9091:9090" 
+    shm_size: '12g'
+    volumes:
+      - ray_tune_tmp:/tmp/ray
+    environment:
+      - RAY_GRAFANA_HOST=http://grafana-tune:3000
+      - RAY_GRAFANA_IFRAME_HOST=http://${HOST_IP}:3001
+      - RAY_PROMETHEUS_HOST=http://ray-head-tune:9090
+      - RAY_PROMETHEUS_NAME=Prometheus
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
+      - BUCKET_NAME=${BUCKET_NAME}
+    user: root
+    networks:
+      - ray_tune_network
+
+  grafana-tune:
+    image: grafana/grafana:latest
+    container_name: grafana-tune
+    entrypoint: |
+      /bin/sh -c "
+      # Wait for config directory
+      while [ ! -f /tmp/ray/session_latest/metrics/grafana/grafana.ini ]; do
+        echo 'Waiting for Grafana config files...'
+        sleep 2
+      done
+      
+      # Start Grafana with copied config
+      /run.sh --config /tmp/ray/session_latest/metrics/grafana/grafana.ini"
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_tune_storage:/var/lib/grafana
+      - ray_tune_tmp:/tmp/ray:ro
+    environment:
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_PATHS_PROVISIONING=/tmp/ray/session_latest/metrics/grafana/provisioning
+      - GF_SERVER_HTTP_ADDR=0.0.0.0
+      - GF_DATABASE_TYPE=sqlite3
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_AUTH_PROXY_ENABLED=true
+      - GF_AUTH_PROXY_AUTO_SIGN_UP=true
+    depends_on:
+      - ray-head-tune
+    networks:
+      - ray_tune_network
+
+  ray-worker-1-tune:
+    image: rayproject/ray:2.42.1-gpu
+    container_name: ray-worker-1-tune
+    command: ["ray", "start", "--address=ray-head-tune:6379", "--num-cpus=32", "--num-gpus=1", "--block"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: "nvidia"
+              capabilities: ["gpu"]
+              device_ids: ["0"]
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
+    shm_size: '12g'
+    volumes:
+      - ./datasets:/mnt
+    depends_on:
+      - ray-head-tune
+    networks:
+      - ray_tune_network
+      
+  yolo-tune:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yolo-tune
+    depends_on:
+      - ray-head-tune
+    volumes:
+      - ./datasets:/app/datasets
+      - yolo_tune_runs:/app/runs
+      - yolo_tune_weights:/app/weights
+      - ./config:/app/config
+    environment:
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+      - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BUCKET_NAME=mlflow-artifacts
+      - YOLO_CONFIG_DIR=/app/config/ultralytics
+      - RAY_ADDRESS=ray://ray-head-tune:6379
+      - RAY_HEAD_ADDRESS=ray-head-tune:6379
+    command: >
+      python3 -u /app/yolo_ray_main.py
+        --config /app/config/config.yaml
+        --data /app/config/data.yaml
+        --experiment "YOLO12-RayTune"
+        --mode tune
+        --num_samples 20
+        --max_concurrent 2
+    stdin_open: true
+    tty: true
+    networks:
+      - ray_tune_network
+
+volumes:
+  grafana_tune_storage:
+  ray_tune_tmp:
+  minio_tune_data:
+  yolo_tune_runs:
+    driver: local
+  yolo_tune_weights:
+    driver: local
+
+networks:
+  ray_tune_network:
+    name: ray_tune_network
