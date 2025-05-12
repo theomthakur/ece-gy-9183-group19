@@ -116,7 +116,7 @@ services:
       - AWS_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
     shm_size: '12g'
     volumes:
-      - ./datasets:/mnt
+      - /mnt/object:/mnt
     depends_on:
       - ray-head
 

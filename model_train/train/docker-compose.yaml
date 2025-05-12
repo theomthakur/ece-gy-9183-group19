@@ -7,7 +7,7 @@ services:
     container_name: yolo-api
     shm_size: 96G
     volumes:
-      - ./datasets:/app/datasets
+      - /mnt/object:/app/datasets
       - yolo_weights:/app/weights
       - yolo_runs:/app/runs
       - ./config:/app/config

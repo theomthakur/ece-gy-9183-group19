@@ -6,7 +6,7 @@ services:
     container_name: yolo-trainer
     shm_size: 96G
     volumes:
-      - ./datasets:/app/datasets
+      - /mnt/object:/app/datasets
       - yolo_runs:/app/runs
       - yolo_weights:/app/weights
       - ./config:/app/config

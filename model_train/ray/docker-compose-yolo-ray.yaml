@@ -124,7 +124,7 @@ services:
       - AWS_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
     shm_size: '12g'
     volumes:
-      - ./datasets:/mnt
+      - /mnt/object:/mnt
     depends_on:
       - ray-head-ray
     networks:
@@ -138,7 +138,7 @@ services:
     depends_on:
       - ray-head-ray
     volumes:
-      - ./datasets:/app/datasets
+      - /mnt/object:/app/datasets
       - yolo_ray_runs:/app/runs
       - yolo_ray_weights:/app/weights
       - ./config:/app/config
