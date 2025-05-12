@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: streamlit_dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./scaled_bounding_boxes.csv:/app/scaled_bounding_boxes.csv:ro
+      - ./feedback:/app/feedback
+      - ./data_dashboard.log:/app/data_dashboard.log
+      - ./organized:/app/images:ro  # Optional: for sample images
+    environment:
+      - PYTHONUNBUFFERED=1
