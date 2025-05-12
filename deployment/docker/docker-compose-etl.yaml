@@ -6,7 +6,7 @@ volumes:
 services:
   extract-data:
     container_name: etl_extract_data
-    image: python:3.11
+    image: python:3.11-slim
     user: root
     volumes:
       - vinbigdata:/data
@@ -24,7 +24,7 @@ services:
 
         echo "Updating package lists and installing dependencies..."
         apt-get update
-        apt-get install -y 7zip
+        apt-get install -y p7zip-full
 
         echo "Installing Kaggle CLI..."
         pip install kaggle
@@ -35,181 +35,332 @@ services:
         cd vinbigdata
 
         echo "Downloading dataset from Kaggle..."
-        kaggle competitions download -c vinbigdata-chest-xray-abnormalities-detection
+        kaggle datasets download -d xhlulu/vinbigdata-chest-xray-resized-png-1024x1024
 
         echo "Extracting dataset..."
-        unzip -o vinbigdata-chest-xray-abnormalities-detection.zip
-        rm -rf vinbigdata-chest-xray-abnormalities-detection.zip
+        7z x -aoa vinbigdata-chest-xray-resized-png-1024x1024.zip
+        rm -rf vinbigdata-chest-xray-resized-png-1024x1024.zip
+        rm -rf train_meta.csv
+        rm -rf test
 
         echo "Listing contents of /data after extract stage:"
         ls -l /data
 
   transform-data:
     container_name: etl_transform_data
-    image: python:3.11
+    # depends_on:
+    #   extract-data:
+    #     condition: service_completed_successfully
+    image: python:3.11-slim
     volumes:
       - vinbigdata:/data
+      - ./scaled_bounding_boxes.csv:/data/vinbigdata/scaled_bounding_boxes.csv
     working_dir: /data/vinbigdata
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
     command:
       - bash
       - -c
       - |
         set -e
-        echo "Installing required packages..."
-        pip install kaggle pydicom pillow tqdm numpy
+        echo "Starting data processing pipeline..."
         
-        echo "Creating DICOM preprocessing script..."
-        cat > preprocess.py << 'EOF'
+        # Install required packages efficiently
+        pip install --no-cache-dir kaggle pillow tqdm numpy pyyaml
+        
+        echo "Creating YOLO conversion script..."
+        cat > convert_to_yolo.py << 'EOF'
         import os
-        import numpy as np
-        import pydicom
-        from pydicom.pixel_data_handlers.util import apply_voi_lut
-        from PIL import Image
-        from tqdm import tqdm
-        from multiprocessing import Pool, cpu_count
+        import csv
+        import random
+        import yaml
+        import shutil
+        import json
+        from pathlib import Path
+        import logging
 
-        def read_xray(path, voi_lut=True, fix_monochrome=True):
-            dicom = pydicom.dcmread(path)
-            if voi_lut:
-                data = apply_voi_lut(dicom.pixel_array, dicom)
-            else:
-                data = dicom.pixel_array
-            if fix_monochrome and dicom.PhotometricInterpretation == "MONOCHROME1":
-                data = np.amax(data) - data
-            data = data - np.min(data)
-            data = data / np.max(data)
-            data = (data * 255).astype(np.uint8)
-            return data
+        # Set up logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        logger = logging.getLogger(__name__)
 
-        def process_file(args):
-            dicom_path, output_dir = args
-            try:
-                img_data = read_xray(dicom_path)
-                img = Image.fromarray(img_data)
-                # Use the base filename, change extension to .png
-                base = os.path.splitext(os.path.basename(dicom_path))[0]
-                output_path = os.path.join(output_dir, base + '.png')
-                img.save(output_path)
-                return output_path
-            except Exception as e:
-                print(f"Error processing {dicom_path}: {e}")
+        # Configuration
+        OUTPUT_DIR = 'organized'
+        SPLITS = ["training", "validation", "test", "staging", "canary", "production"]
+
+        def convert_to_yolo_format(row):
+            """Convert bounding box to YOLO format using fixed 1024x1024 dimensions"""
+            # Fixed image dimensions for all images
+            image_width = 1024
+            image_height = 1024
+            
+            # For "No finding" class (class_id 14), set bounding box to (0, 0, 1, 1) in pixel space
+            if row['class_id'] == '14' or row['class_id'] == 14:
+                # Use (0, 0, 1, 1) as bounding box
+                x_min, y_min = 0, 0
+                x_max, y_max = 1, 1
+            # For other classes with missing bounding boxes, skip
+            elif not all(coord is not None and coord != '' for coord in [row['x_min'], row['y_min'], row['x_max'], row['y_max']]):
                 return None
+            else:
+                # Convert to float (in case they're strings in the CSV)
+                x_min = float(row['x_min'])
+                y_min = float(row['y_min'])
+                x_max = float(row['x_max'])
+                y_max = float(row['y_max'])
+            
+            # Calculate center points and dimensions (normalized to [0,1])
+            x_center = (x_min + x_max) / (2 * image_width)
+            y_center = (y_min + y_max) / (2 * image_height)
+            width = (x_max - x_min) / image_width
+            height = (y_max - y_min) / image_height
+            
+            # Ensure values are within [0,1] range
+            x_center_clamped = max(0, min(1, x_center))
+            y_center_clamped = max(0, min(1, y_center))
+            width_clamped = max(0, min(1, width))
+            height_clamped = max(0, min(1, height))
+            
+            # Format: <class_id> <x_center> <y_center> <width> <height>
+            return f"{row['class_id']} {x_center_clamped:.6f} {y_center_clamped:.6f} {width_clamped:.6f} {height_clamped:.6f}"
 
-        def main(input_directory, output_directory):
-            if not os.path.exists(output_directory):
-                os.makedirs(output_directory)
-            # Gather all DICOM files
-            dicom_files = [
-                os.path.join(input_directory, f)
-                for f in os.listdir(input_directory)
-                if f.endswith('.dicom') or f.endswith('.dcm')
-            ]
-            args_list = [(f, output_directory) for f in dicom_files]
+        def organize_data(csv_file_path, input_images_dir, metadata_dict=None):
+            """Process CSV file and organize dataset for YOLO"""
+            logger.info(f"Processing annotations from {csv_file_path}")
             
-            # Use all available CPU cores
-            processed_files = []
-            with Pool(cpu_count()) as pool:
-                results = list(tqdm(pool.imap_unordered(process_file, args_list), 
-                                  total=len(args_list), 
-                                  desc="Processing DICOM images"))
-                processed_files = [f for f in results if f is not None]
+            # Create directories
+            os.makedirs(OUTPUT_DIR, exist_ok=True)
             
-            return processed_files
+            # Create standard YOLO structure with separate directories for each split
+            for split in SPLITS:
+                os.makedirs(os.path.join(OUTPUT_DIR, split, 'images'), exist_ok=True)
+                os.makedirs(os.path.join(OUTPUT_DIR, split, 'labels'), exist_ok=True)
+            
+            # Read CSV
+            try:
+                with open(csv_file_path, 'r', newline='', encoding='utf-8') as csv_file:
+                    csv_reader = csv.DictReader(csv_file)
+                    data = list(csv_reader)
+                logger.info(f"Read {len(data)} rows from CSV")
+            except Exception as e:
+                logger.error(f"Error reading CSV: {e}")
+                return
+            
+            # Extract class information
+            class_map = {}
+            for row in data:
+                if row.get('class_id') and row.get('class_name'):
+                    try:
+                        class_map[int(row['class_id'])] = row['class_name']
+                    except ValueError:
+                        logger.warning(f"Invalid class_id: {row['class_id']}")
+            
+            # Write classes.txt
+            classes_file = os.path.join(OUTPUT_DIR, 'classes.txt')
+            sorted_classes = sorted(class_map.items())
+            with open(classes_file, 'w', encoding='utf-8') as f:
+                for class_id, class_name in sorted_classes:
+                    f.write(f"{class_id} {class_name}\n")
+            logger.info(f"Wrote {len(sorted_classes)} classes to {classes_file}")
+            
+            # Organize data by image_id and rad_id
+            image_rad_data = {}
+            all_image_ids = set()
+            
+            for row in data:
+                if row.get('image_id') and row.get('rad_id'):
+                    image_id = row['image_id']
+                    key = f"{image_id}_{row['rad_id']}"
+                    all_image_ids.add(image_id)
+                    
+                    if key not in image_rad_data:
+                        image_rad_data[key] = []
+                    
+                    yolo_format = convert_to_yolo_format(row)
+                    if yolo_format:
+                        image_rad_data[key].append(yolo_format)
+            
+            unique_image_ids = list(all_image_ids)
+            total_unique_images = len(unique_image_ids)
+            logger.info(f"Found {total_unique_images} unique images with labels from {len(image_rad_data)} image-radiologist combinations")
+            
+            # Shuffle the unique image IDs to ensure random distribution
+            random.shuffle(unique_image_ids)
+            
+            # Calculate split sizes based on unique images
+            # The split specification adds up to 15000 (11500 + 750 + 750 + 1000 + 500 + 500 labeled)
+            # We need to scale this to match the actual number of unique images
+            
+            scale_factor = total_unique_images / 15000  # Calculate the scaling factor
+            
+            # Calculate the number of images for each split
+            splits = {
+                "training": {"size": int(11500 * scale_factor), "images": []},
+                "validation": {"size": int(750 * scale_factor), "images": []},
+                "test": {"size": int(750 * scale_factor), "images": []},
+                "staging": {"size": int(1000 * scale_factor), "images": []},
+                "canary": {"size": int(500 * scale_factor), "images": []},
+                "production": {"size": int(500 * scale_factor), "images": []}
+            }
+            
+            # Distribute image IDs to splits
+            start_idx = 0
+            for split_name, split_info in splits.items():
+                end_idx = start_idx + split_info["size"]
+                # Make sure we don't go out of bounds
+                end_idx = min(end_idx, total_unique_images)
+                splits[split_name]["images"] = unique_image_ids[start_idx:end_idx]
+                start_idx = end_idx
+            
+            # Write label files and copy images to their respective split directories
+            label_files_created = 0
+            images_copied = 0
+            
+            # Process each image-radiologist combination
+            for key, annotations in image_rad_data.items():
+                image_id, rad_id = key.split('_')
+                
+                # Find which split this image belongs to
+                target_split = None
+                for split_name, split_info in splits.items():
+                    if image_id in split_info["images"]:
+                        target_split = split_name
+                        break
+                
+                if target_split is None:
+                    logger.warning(f"No split assigned for image {image_id}, skipping")
+                    continue
+                
+                # Write the label file to the appropriate split directory
+                label_file_path = os.path.join(OUTPUT_DIR, target_split, 'labels', f"{image_id}_{rad_id}.txt")
+                with open(label_file_path, 'w', encoding='utf-8') as f:
+                    f.write('\n'.join(annotations))
+                
+                label_files_created += 1
+                
+                # Copy the image to the appropriate split directory
+                original_image_path = os.path.join(input_images_dir, f"{image_id}.png")
+                if os.path.exists(original_image_path):
+                    dest_image_path = os.path.join(OUTPUT_DIR, target_split, 'images', f"{image_id}_{rad_id}.png")
+                    shutil.copy2(original_image_path, dest_image_path)
+                    images_copied += 1
+            
+            logger.info(f"Created {label_files_created} label files and copied {images_copied} images")
+            
+            # Create data.yaml for YOLO
+            data_yaml = {
+                'path': os.path.abspath(OUTPUT_DIR),  # Use absolute path
+                'train': os.path.join('training', 'images'),  # Path to training images
+                'val': os.path.join('validation', 'images'),  # Path to validation images
+                'test': os.path.join('test', 'images'),  # Path to test images
+                'nc': len(sorted_classes),  # Number of classes
+                'names': [class_name for _, class_name in sorted_classes]  # Class names
+            }
+            
+            with open(os.path.join(OUTPUT_DIR, 'data.yaml'), 'w', encoding='utf-8') as f:
+                yaml.dump(data_yaml, f, default_flow_style=False, sort_keys=False)
+            
+            logger.info(f"Created YOLO configuration file: data.yaml")
+            
+            # Create summary statistics
+            summary = {
+                "total_unique_images": total_unique_images,
+                "total_image_radiologist_combinations": len(image_rad_data),
+                "labels_created": label_files_created,
+                "images_copied": images_copied,
+                "splits": {split_name: len(split_info["images"]) for split_name, split_info in splits.items()}
+            }
+            
+            with open(os.path.join(OUTPUT_DIR, 'summary.json'), 'w', encoding='utf-8') as f:
+                json.dump(summary, f, indent=2)
+            
+            # Print summary
+            logger.info(f"Dataset creation complete in {OUTPUT_DIR}")
+            logger.info("\nSplit summary:")
+            for split_name, split_info in splits.items():
+                image_count = len(split_info["images"])
+                actual_count = sum(1 for key in image_rad_data if key.split('_')[0] in split_info["images"])
+                logger.info(f"  {split_name}: {image_count} unique images, {actual_count} image-radiologist combinations")
+            
+            return summary
         EOF
         
-        echo "Running DICOM preprocessing..."
-        python3 -c '
+        echo "Creating main processing script..."
+        cat > process_dataset.py << 'EOF'
         import os
-        import shutil
-        import random
-        from preprocess import main
+        import logging
+        import json
+        from pathlib import Path
+        from convert_to_yolo import organize_data
+
+        # Set up logging to file and console
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler("data_processing.log"),
+                logging.StreamHandler()
+            ]
+        )
+        logger = logging.getLogger(__name__)
+
+        def main():
+            """Run the complete data processing pipeline"""
+            # Define directories
+            base_dir = Path("/data/vinbigdata")
+            train_input_dir = base_dir / "train"
+            csv_file = base_dir / "scaled_bounding_boxes.csv"
+            
+            # Check if input directories and files exist
+            if not train_input_dir.exists():
+                logger.error(f"Training input directory {train_input_dir} not found")
+                return
+            
+            if not csv_file.exists():
+                logger.error(f"CSV file {csv_file} not found")
+                return
+            
+            # Create data directory for metadata
+            metadata_dir = base_dir / "data"
+            os.makedirs(metadata_dir, exist_ok=True)
+            
+            # Convert to YOLO format with multiple splits
+            logger.info("Converting to YOLO format...")
+            summary = organize_data(str(csv_file), str(train_input_dir))
+            
+            logger.info("Data processing complete!")
+            logger.info(f"Summary: {json.dumps(summary, indent=2)}")
+            
+            # Record completed successfully
+            with open(str(metadata_dir / "processing_complete.txt"), 'w') as f:
+                f.write("Data processing completed successfully\n")
+
+        if __name__ == "__main__":
+            try:
+                main()
+            except Exception as e:
+                logger.error(f"Unhandled exception in main process: {e}", exc_info=True)
+        EOF
         
-        # First, preprocess DICOM images to PNG
-        train_input_directory = "train"
-        train_output_directory = "data/train"
-        test_input_directory = "test"
-        test_output_directory = "data/test"
+        echo "Running data processing pipeline..."
+        python3 process_dataset.py
         
-        # Make sure directories exist
-        os.makedirs(train_output_directory, exist_ok=True)
-        os.makedirs(test_output_directory, exist_ok=True)
-        
-        print("Processing training DICOM images...")
-        train_files = main(train_input_directory, train_output_directory)
-        print(f"Processed {len(train_files)} training images")
-        
-        print("Processing test DICOM images...")
-        test_files = main(test_input_directory, test_output_directory)
-        print(f"Processed {len(test_files)} test images")
-        
-        # Now organize processed images into splits
-        output_base_dir = "data/organized"
-        splits = {
-            "training": {"labeled": 11250, "unlabeled": 0},
-            "validation": {"labeled": 750, "unlabeled": 0},
-            "test": {"labeled": 750, "unlabeled": 0},
-            "staging": {"labeled": 1000, "unlabeled": 1000},
-            "canary": {"labeled": 500, "unlabeled": 1000},
-            "production": {"labeled": 500, "unlabeled": 1000}
-        }
-        
-        flat_structure_splits = ["training", "validation", "test"]
-        subdir_splits = ["staging", "canary", "production"]
-        
-        for split_name in splits.keys():
-            os.makedirs(os.path.join(output_base_dir, split_name), exist_ok=True)
-            if split_name in subdir_splits:
-                os.makedirs(os.path.join(output_base_dir, split_name, "labeled"), exist_ok=True)
-                os.makedirs(os.path.join(output_base_dir, split_name, "unlabeled"), exist_ok=True)
-        
-        labeled_files = []
-        for file in os.listdir(train_output_directory):
-            if os.path.isfile(os.path.join(train_output_directory, file)):
-                labeled_files.append(file)
-        
-        random.shuffle(labeled_files)
-        labeled_used = 0
-        
-        for split_name, counts in splits.items():
-            labeled_count = counts["labeled"]
-            if labeled_count > 0:
-                split_files = labeled_files[labeled_used:labeled_used + labeled_count]
-                labeled_used += labeled_count
-                for file in split_files:
-                    src = os.path.join(train_output_directory, file)
-                    if split_name in flat_structure_splits:
-                        dst = os.path.join(output_base_dir, split_name, file)
-                    else:
-                        dst = os.path.join(output_base_dir, split_name, "labeled", file)
-                    shutil.copy(src, dst)
-        
-        unlabeled_files = []
-        for file in os.listdir(test_output_directory):
-            if os.path.isfile(os.path.join(test_output_directory, file)):
-                unlabeled_files.append(file)
-        
-        random.shuffle(unlabeled_files)
-        unlabeled_used = 0
-        
-        for split_name, counts in splits.items():
-            unlabeled_count = counts["unlabeled"]
-            if unlabeled_count > 0:
-                split_files = unlabeled_files[unlabeled_used:unlabeled_used + unlabeled_count]
-                unlabeled_used += unlabeled_count
-                for file in split_files:
-                    src = os.path.join(test_output_directory, file)
-                    dst = os.path.join(output_base_dir, split_name, "unlabeled", file)
-                    shutil.copy(src, dst)
-        
-        print(f"Data organization complete. Used {labeled_used} labeled files and {unlabeled_used} unlabeled files.")
-        '
-        
-        echo "Listing final directory structure:"
+        echo "Data processing complete!"
         find /data/vinbigdata/data -type d | sort
+        find /data/vinbigdata/organized -type d | sort
 
   load-data:
     container_name: etl_load_data
+    # depends_on:
+    #   transform-data:
+    #     condition: service_completed_successfully
     image: rclone/rclone:latest
+    environment:
+      - RCLONE_CONTAINER=object-persist-project19
     volumes:
       - vinbigdata:/data
       - ~/.config/rclone/rclone.conf:/root/.config/rclone/rclone.conf:ro
@@ -218,15 +369,12 @@ services:
       - -c
       - |
         set -e
-        if [ -z "$RCLONE_CONTAINER" ]; then
-          echo "ERROR: RCLONE_CONTAINER is not set"
-          exit 1
-        fi
+        export RCLONE_CONTAINER=object-persist-project19
         echo "Cleaning up existing contents of container..."
         rclone delete chi_tacc:$RCLONE_CONTAINER --rmdirs || true
         
         echo "Copying organized chest X-ray data to storage container..."
-        rclone copy /data/vinbigdata/data/organized chi_tacc:$RCLONE_CONTAINER \
+        rclone copy /data/vinbigdata/organized chi_tacc:$RCLONE_CONTAINER \
           --progress \
           --transfers=32 \
           --checkers=16 \
