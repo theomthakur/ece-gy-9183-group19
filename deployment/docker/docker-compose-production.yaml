@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  etl-production:
+    container_name: etl_production
+    image: python:3.11-slim
+    volumes:
+      - /mnt/mydata/model-checkpoints/feedback:/app/feedback:ro
+      - /data/vinbigdata:/app/data
+      - ~/.config/rclone/rclone.conf:/root/.config/rclone/rclone.conf:ro
+    working_dir: /app
+    environment:
+      - RCLONE_CONTAINER=object-persist-project19
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+        
+        # Install dependencies
+        echo "Installing dependencies..."
+        pip install --no-cache-dir pandas>=2.0.0 rclone>=1.62.2
+        
+        # Extract feedback
+        echo "Extracting feedback from production..."
+        mkdir -p /app/data/raw_prod
+        feedback_files=$(ls /app/feedback/*.json 2>/dev/null || echo "")
+        if [ -z "$feedback_files" ]; then
+          echo "No feedback files found" >&2
+        else
+          all_data=()
+          for file in $feedback_files; do
+            data=$(cat "$file")
+            all_data+=("$data")
+          done
+          if [ ${#all_data[@]} -gt 0 ]; then
+            echo "${all_data[@]}" | jq -s '.' > /app/data/raw_prod/feedback.json
+            python3 -c "import pandas as pd; import json; df = pd.DataFrame(json.load(open('/app/data/raw_prod/feedback.json'))); df.to_csv('/app/data/raw_prod/feedback.csv', index=False)" || exit 1
+            echo "Extracted $(ls /app/feedback | wc -l) feedback records"
+          else
+            echo "No data extracted from feedback files" >&2
+          fi
+        fi
+        
+        # Transform feedback
+        echo "Transforming feedback for re-training..."
+        mkdir -p /app/data/organized_prod
+        if [ -f /app/data/raw_prod/feedback.csv ]; then
+          python3 -c "import pandas as pd; import os; df = pd.read_csv('/app/data/raw_prod/feedback.csv'); df_retrain = df[df['confidence'] > 0.9].copy(); df_retrain.to_csv('/app/data/organized_prod/retrain.csv', index=False); print(f'Transformed {len(df_retrain)} high-confidence records for re-training')" || exit 1
+        else
+          echo "No feedback.csv found for transformation" >&2
+        fi
+        
+        # Load to Swift
+        echo "Loading re-training data to Swift..."
+        if [ -f /app/data/organized_prod/retrain.csv ]; then
+          rclone copy /app/data/organized_prod chi_tacc:$RCLONE_CONTAINER/organized/retrain/ --progress || exit 1
+          echo "Re-training data loaded to Swift"
+        else
+          echo "No retrain.csv found for loading" >&2
+        fi

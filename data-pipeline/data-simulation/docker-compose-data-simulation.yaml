@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  simulator:
+    container_name: online_data_simulator
+    image: python:3.11-slim
+    volumes:
+      - /mnt/mydata/model-checkpoints/logs:/app/logs
+      - /mnt/mydata/model-checkpoints/feedback:/app/feedback
+      - ./data_simulation.py:/app/data_simulation.py
+      - ~/.config/rclone/rclone.conf:/root/.config/rclone/rclone.conf:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - RCLONE_CONTAINER=object-persist-project19
+      - TRITON_URL=http://129.114.25.124:8000
+      - LOAD_PATTERN=1,2,3,5,3,2,1
+      - DELAY_BETWEEN_STEPS=60
+      - REQUEST_TIMEOUT=5
+    command:
+      - bash
+      - -c
+      - |
+        pip install requests pillow rclone
+        python3 data_simulation.py
