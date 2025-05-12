@@ -229,7 +229,7 @@ Our final report will detail the system-level optimizations implemented, the con
 
 
 
-#Continues pipeline:# ML Pipeline Infrastructure with Kubernetes
+# Continues pipeline:ML Pipeline Infrastructure with Kubernetes
 
 This part sets up  our complete machine learning pipeline on Chameleon Cloud using Kubernetes(only iac part not gpu part). It handles everything from setting up servers to deploying models in different environments.
 
