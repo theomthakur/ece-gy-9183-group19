@@ -32,7 +32,7 @@ spec:
 
           while [ $i -le $MAX_RETRIES ]; do
             echo "Attempt $i of $MAX_RETRIES: Cloning repo..."
-            git clone --branch master https://github.com/teaching-on-testbeds/gourmetgram.git /mnt/workspace && break
+            git clone --branch master https://github.com/theomthakur/ece-gy-9183-group19.git /mnt/workspace && break
             echo "Git clone failed. Retrying in 5 seconds..."
             i=$((i + 1))
             sleep 5
