@@ -1,0 +1,176 @@
+name: yolo_ray_training
+
+services:
+  minio-ray:
+    image: minio/minio
+    container_name: minio-ray
+    restart: always
+    expose:
+      - "9000"
+    ports:  
+      - "9004:9000" 
+      - "9005:9001"  
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY}
+    healthcheck:
+      test: timeout 5s bash -c ':> /dev/tcp/127.0.0.1/9000' || exit 1
+      interval: 1s
+      timeout: 10s
+      retries: 5
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_ray_data:/data 
+    networks:
+      - yolo_ray_network
+      
+  minio-create-bucket-ray:
+    image: minio/mc
+    depends_on:
+      minio-ray:
+        condition: service_healthy
+    container_name: minio-create-bucket-ray
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set minio http://minio-ray:9000 ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY} &&
+      if ! mc ls minio/mlflow-artifacts; then
+        mc mb minio/mlflow-artifacts &&
+        echo 'Bucket mlflow-artifacts created'
+      else
+        echo 'Bucket mlflow-artifacts already exists';
+      fi"
+    networks:
+      - yolo_ray_network
+
+  ray-head-ray:
+    image: rayproject/ray:2.42.1
+    container_name: ray-head-ray
+    command: |
+      /bin/sh -c "
+      mkdir -p /tmp/ray && 
+      chown -R root:root /tmp/ray &&
+      ray metrics launch-prometheus &&
+      ray start --head --port=6379 --dashboard-host=0.0.0.0 --block --metrics-export-port=8080"
+    ports:
+      - "6381:6379" 
+      - "8267:8265" 
+      - "8083:8081" 
+      - "8092:8090" 
+      - "9092:9090" 
+    shm_size: '12g'
+    volumes:
+      - ray_ray_tmp:/tmp/ray
+    environment:
+      - RAY_GRAFANA_HOST=http://grafana-ray:3000
+      - RAY_GRAFANA_IFRAME_HOST=http://${HOST_IP}:3002
+      - RAY_PROMETHEUS_HOST=http://ray-head-ray:9090
+      - RAY_PROMETHEUS_NAME=Prometheus
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
+      - BUCKET_NAME=${BUCKET_NAME}
+    user: root
+    networks:
+      - yolo_ray_network
+
+  grafana-ray:
+    image: grafana/grafana:latest
+    container_name: grafana-ray
+    entrypoint: |
+      /bin/sh -c "
+      # Wait for config directory
+      while [ ! -f /tmp/ray/session_latest/metrics/grafana/grafana.ini ]; do
+        echo 'Waiting for Grafana config files...'
+        sleep 2
+      done
+      
+      # Start Grafana with copied config
+      /run.sh --config /tmp/ray/session_latest/metrics/grafana/grafana.ini"
+    ports:
+      - "3002:3000"
+    volumes:
+      - grafana_ray_storage:/var/lib/grafana
+      - ray_ray_tmp:/tmp/ray:ro
+    environment:
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_PATHS_PROVISIONING=/tmp/ray/session_latest/metrics/grafana/provisioning
+      - GF_SERVER_HTTP_ADDR=0.0.0.0
+      - GF_DATABASE_TYPE=sqlite3
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_AUTH_PROXY_ENABLED=true
+      - GF_AUTH_PROXY_AUTO_SIGN_UP=true
+    depends_on:
+      - ray-head-ray
+    networks:
+      - yolo_ray_network
+
+  ray-worker-1-ray:
+    image: rayproject/ray:2.42.1-gpu
+    container_name: ray-worker-1-ray
+    command: ["ray", "start", "--address=ray-head-ray:6379", "--num-cpus=32", "--num-gpus=1", "--block"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: "nvidia"
+              capabilities: ["gpu"]
+              device_ids: ["0"]
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
+    shm_size: '12g'
+    volumes:
+      - ./datasets:/mnt
+    depends_on:
+      - ray-head-ray
+    networks:
+      - yolo_ray_network
+      
+  yolo-ray:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yolo-ray
+    depends_on:
+      - ray-head-ray
+    volumes:
+      - ./datasets:/app/datasets
+      - yolo_ray_runs:/app/runs
+      - yolo_ray_weights:/app/weights
+      - ./config:/app/config
+    environment:
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+      - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BUCKET_NAME=mlflow-artifacts
+      - YOLO_CONFIG_DIR=/app/config/ultralytics
+      - RAY_ADDRESS=ray://ray-head-ray:6379
+      - RAY_HEAD_ADDRESS=ray-head-ray:6379
+    command: >
+      python3 -u /app/yolo_ray_main.py
+        --config /app/config/config.yaml
+        --data /app/config/data.yaml
+        --experiment "YOLO12-Ray-Training"
+        --mode train
+    stdin_open: true
+    tty: true
+    networks:
+      - yolo_ray_network
+
+volumes:
+  grafana_ray_storage:
+  ray_ray_tmp:
+  minio_ray_data:
+  yolo_ray_runs:
+    driver: local
+  yolo_ray_weights:
+    driver: local
+
+networks:
+  yolo_ray_network:
+    name: yolo_ray_network
