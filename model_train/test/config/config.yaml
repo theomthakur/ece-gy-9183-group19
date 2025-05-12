@@ -5,7 +5,7 @@ model_name: 'yolo12n'
 epochs: 1
 batch_size: 0.8
 img_size: 640
-device: 'cuda'
+device: [0]
 workers: 1
 seed: 42
 
