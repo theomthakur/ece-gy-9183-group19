@@ -44,7 +44,7 @@ Our model has high enough throughput on CPU for our use case and fits the busine
 
 - **Online Evaluation in Canary:** 
 
-- **Feedback Loop:** There is an option to track feedback through streamlit and they get uploaded to MinIO which is automatically uploaded to LabelStudio through one script
+- **Feedback Loop:** There is an option to track feedback through streamlit and they get uploaded to MinIO which is automatically uploaded to LabelStudio through one script. There is also low confidence imaeg bucketing
   
 - **Business-Specific Evaluation:** Two business-specific metrics will be defined, time saved and missed pathologies. The missed pathalogies are being tracked through feedback
 
