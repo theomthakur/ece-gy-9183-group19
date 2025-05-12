@@ -212,5 +212,120 @@ Our final report will detail the system-level optimizations implemented, the con
 
 - **Online Data:** To simulate online data usage, a simple script will be developed that sends X-ray images to the system at a realistic rate, mimicking real hospital scenarios. The script will include a mix of normal and abnormal cases. These images will undergo the same preprocessing steps as those used for training data to maintain consistency.
 
+
+
+
+
+
+
 ### EXTRA DIFFICULTY POINTS:
 - **Interactive Data Dashboard:** An interactive data dashboard will be built using Grafana and Prometheus to provide insights into various aspects of the system. The dashboard will display basic dataset statistics such as the number of images and types of findings, along with data quality metrics like missing annotations or image quality issues. It will also track model performance metrics over time and show simulated inference requests along with their processing times. This dashboard will serve as a critical tool for monitoring and analysis.
+
+
+
+
+
+
+
+
+
+#Continues pipeline:# ML Pipeline Infrastructure with Kubernetes
+
+This part sets up  our complete machine learning pipeline on Chameleon Cloud using Kubernetes(only iac part not gpu part). It handles everything from setting up servers to deploying models in different environments.
+
+## What We Built
+
+- 3 virtual machines running Kubernetes
+- Persistent storage for data that doesn't get deleted when VMs restart
+- Tools for machine learning workflows including model training and serving
+
+## Tools Used
+
+- **Terraform**: Creates our cloud resources automatically
+- **Ansible**: Sets up software on our servers
+- **Kubernetes**: Manages our containerized applications
+- **ArgoCD**: Keeps our applications in sync with our code
+- **MinIO**: Stores large files and model artifacts
+- **MLflow**: Tracks model versions and experiments
+- **PostgreSQL**: Stores metadata and structured data
+- **Grafana & Prometheus**: Monitors our system
+- **Label Studio**: Helps with data labeling
+
+## How to Set Up
+
+### 1. Prepare the Environment
+```bash
+# Install Terraform
+mkdir -p /work/.local/bin
+wget https://releases.hashicorp.com/terraform/1.10.5/terraform_1.10.5_linux_amd64.zip
+unzip terraform_1.10.5_linux_amd64.zip
+mv terraform /work/.local/bin
+
+# Install Ansible
+PYTHONUSERBASE=/work/.local pip install --user ansible-core==2.16.9 ansible==9.8.0
+```
+
+### 2. Create Cloud Resources
+```bash
+cd /work/group19/iac/tf/kvm
+terraform init
+export TF_VAR_suffix=project19
+export TF_VAR_key=group19-shared-key
+terraform apply -auto-approve
+```
+
+### 3. Set Up Kubernetes
+```bash
+# Configure servers
+ansible-playbook -i inventory.yml pre_k8s/pre_k8s_configure.yml
+
+# Install Kubernetes
+cd /work/group19/iac/ansible/k8s/kubespray
+ansible-playbook -i ../inventory/mycluster --become --become-user=root ./cluster.yml
+
+# Finish setup
+ansible-playbook -i inventory.yml post_k8s/post_k8s_configure.yml
+```
+
+### 4. Deploy ML Tools
+```bash
+# Set up ML platform
+ansible-playbook -i inventory.yml argocd/argocd_add_platform.yml
+
+# Set up environments for models
+ansible-playbook -i inventory.yml argocd/workflow_build_init.yml
+ansible-playbook -i inventory.yml argocd/argocd_add_staging.yml
+ansible-playbook -i inventory.yml argocd/argocd_add_canary.yml
+ansible-playbook -i inventory.yml argocd/argocd_add_prod.yml
+ansible-playbook -i inventory.yml argocd/workflow_templates_apply.yml
+```
+
+## How to Use the System
+
+After setup, you can:
+
+1. **Train models** using Argo Workflows
+2. **Test models** in the staging environment
+3. **Release models** gradually through canary to production
+4. **Monitor performance** with Grafana dashboards
+
+## Access Your Services
+
+Use the floating IP address to access:
+- MinIO: http://[YOUR_IP]:9001
+- MLflow: http://[YOUR_IP]:8000
+- Label Studio: http://[YOUR_IP]:5000
+- Grafana: http://[YOUR_IP]:3000
+- Model API (staging): http://[YOUR_IP]:8081
+- Model API (canary): http://[YOUR_IP]:8080
+- Model API (production): http://[YOUR_IP]
+
+## Clean Up
+
+To delete all resources when finished:
+```bash
+cd /work/group19/iac/tf/kvm
+terraform destroy -auto-approve
+```
+
+This project demonstrates how to build a full ML pipeline with proper testing environments and automated workflows for continuous model improvement.
