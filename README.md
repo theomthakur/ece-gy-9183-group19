@@ -319,7 +319,7 @@ Use the floating IP address to access:
 - Model API (staging): http://[YOUR_IP]:8081
 - Model API (canary): http://[YOUR_IP]:8080
 - Model API (production): http://[YOUR_IP]
-
+here youcan use your flosting ip to see isntacne(we are not providing here for safety reasons)
 ## Clean Up
 
 To delete all resources when finished:
