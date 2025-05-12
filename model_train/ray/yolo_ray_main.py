@@ -16,8 +16,9 @@ def main():
     parser.add_argument("--config", type=str, required=True, help="Path to the config file")
     parser.add_argument("--data", type=str, required=True, help="Path to the data.yaml file")
     parser.add_argument("--experiment", type=str, help="MLflow experiment name")
-    parser.add_argument("--mode", type=str, choices=["train", "tune"], default="train", 
-                        help="Training mode: 'train' for distributed training, 'tune' for hyperparameter tuning")
+    parser.add_argument("--mode", type=str, choices=["train", "retrain", "tune"], default="train", 
+                        help="Training mode: 'train' for new model, 'retrain' to continue training a model, 'tune' for hyperparameter tuning")
+    parser.add_argument("--model_path", type=str, help="Path to model weights for retraining (required if mode is 'retrain')")
     parser.add_argument("--num_samples", type=int, default=10, help="Number of trials for tuning")
     parser.add_argument("--max_concurrent", type=int, default=None, help="Max concurrent trials")
     
@@ -28,15 +29,20 @@ def main():
     if args.experiment:
         os.environ["MLFLOW_EXPERIMENT_NAME"] = args.experiment
     
-
     config = load_config(args.config)
     print(f"Loaded configuration from {args.config}")
     
-
     config["output_dir"] = "/app/runs"
     
-    if args.mode == "train":
-        print("Starting distributed training...")
+    if args.mode == "retrain" and not args.model_path:
+        raise ValueError("--model_path must be specified when mode is 'retrain'")
+    
+    if args.mode in ["train", "retrain"]:
+        print(f"Starting {'re' if args.mode == 'retrain' else ''}training...")
+        
+        if args.mode == "retrain":
+            config["pretrained_weights"] = args.model_path
+            print(f"Retraining using model: {args.model_path}")
         
         num_gpus = int(ray.cluster_resources().get("GPU", 0))
         num_workers = max(1, num_gpus)
@@ -56,6 +62,9 @@ def main():
         timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
         run_name = f"{config['model_name']}-{timestamp}"
         
+        if args.mode == "retrain":
+            run_name = f"retrain-{Path(args.model_path).stem}-{timestamp}"
+        
         mlflow_callback = MLflowLoggerCallback(
             tracking_uri=os.environ.get("MLFLOW_TRACKING_URI"),
             experiment_name=os.environ.get("MLFLOW_EXPERIMENT_NAME", "YOLO-Ray-Train"),
@@ -72,8 +81,8 @@ def main():
             config, 
             args.data, 
             scaling_config, 
-            checkpoint_config,
-            run_config
+            checkpoint_dir="s3://mlflow-artifacts/ray-checkpoints",
+            run_config=run_config
         )
         
         print(f"Training completed: {result.metrics}")
