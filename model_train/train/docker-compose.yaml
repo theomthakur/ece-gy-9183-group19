@@ -13,6 +13,7 @@ services:
       - ./config:/app/config
     ports:
       - "8000:8000"
+      - "9090:9090"
     deploy:
       resources:
         reservations:
@@ -24,7 +25,7 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - MLFLOW_TRACKING_URI=http://129.114.26.124:8000
       - MLFLOW_EXPERIMENT_NAME=YOLO12-Training
-      - SERVICE_PORT=8000
+      - SERVICE_PORT=9090
       - CONFIG_PATH=/app/config/config.yaml
       - DATA_PATH=/app/config/data.yaml
       - MODEL_PATH=/app/weights/yolo12n.pt
