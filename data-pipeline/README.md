@@ -23,7 +23,7 @@ We use persistent storage on Chameleon to manage data effectively:
 
 ### Data Pipeline
 - **Offline Pipeline**:
-  - **Implementation**: See [deployment/docker/docker-compose-etl.yaml](deployment/docker/docker-compose-etl.yaml).
+  - **Implementation**: See [ece-gy-9183-group19/deployment/docker/docker-compose-etl.yaml](ece-gy-9183-group19/deployment/docker/docker-compose-etl.yaml).
   - **Steps**:
     1. **Extract**: Downloads VinBigData from Kaggle using `kaggle datasets download`.
     2. **Transform**: Converts to YOLO format, splits into `training`, `validation`, `test`, `staging`, `canary`, and `production` sets (scaled to ~15,000 unique images). Avoids data leakage by shuffling unique `image_id`s before splitting.
