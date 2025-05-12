@@ -1,6 +1,6 @@
 # Serving and Monitoring
 
-Original here https://github.com/rigvedrs/serving-monitoring/tree/main
+Original code here https://github.com/rigvedrs/serving-monitoring/tree/main
 
 # Implemented the following
 
