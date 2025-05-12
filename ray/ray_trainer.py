@@ -7,14 +7,13 @@ from pathlib import Path
 
 import ray
 from ray import train
-from ray.train import ScalingConfig, CheckpointConfig, RunConfig
+from ray.train import ScalingConfig, CheckpointConfig, RunConfig, FailureConfig
 from ray.train.torch import TorchTrainer
 import torch
 
 from ultralytics import YOLO
 
 def train_func(config):
-
     rank = train.get_context().get_world_rank()
     world_size = train.get_context().get_world_size()
     
@@ -72,6 +71,23 @@ def train_func(config):
     start_time = time.time()
     
     try:
+        checkpoint = train.get_checkpoint()
+        resume_weights = None
+        
+        if checkpoint:
+            print(f"Worker {rank}: Restoring from checkpoint")
+            with checkpoint.as_directory() as checkpoint_dir:
+                resume_weights = os.path.join(checkpoint_dir, "best.pt")
+                if os.path.exists(resume_weights):
+                    print(f"Worker {rank}: Found checkpoint at {resume_weights}")
+                else:
+                    print(f"Worker {rank}: No checkpoint found at {resume_weights}")
+                    resume_weights = None
+        
+        if resume_weights:
+            print(f"Worker {rank}: Resuming training from {resume_weights}")
+            model = YOLO(resume_weights)
+        
         results = model.train(
             data=yaml_path,
             epochs=epochs,
@@ -135,7 +151,6 @@ def train_func(config):
         raise e
 
 def create_yolo_trainer(config, data_yaml, scaling_config, checkpoint_config=None, run_config=None):
-
     train_config = config.copy()
     train_config["data_yaml"] = data_yaml
     
@@ -149,7 +164,33 @@ def create_yolo_trainer(config, data_yaml, scaling_config, checkpoint_config=Non
     
     return trainer
 
-def run_distributed_training(config, data_yaml, scaling_config, checkpoint_config, run_config=None):
+def run_distributed_training(config, data_yaml, scaling_config, 
+                           checkpoint_dir="s3://your-bucket/ray-checkpoints",
+                           max_failures=2,
+                           run_config=None):
+    
+    checkpoint_config = CheckpointConfig(
+        num_to_keep=5,
+        checkpoint_score_attribute="map50",
+        checkpoint_score_order="max",
+        checkpoint_frequency=1,
+        _checkpoint_keep_all_ranks=False,
+        _checkpoint_upload_from_tasks=True
+    )
+    
+    if run_config is None:
+        run_config = RunConfig(
+            name=f"YOLO-{config['model_name']}-training",
+            storage_path=checkpoint_dir, 
+            failure_config=FailureConfig(max_failures=max_failures)
+        )
+    else:
+        run_config = RunConfig(
+            name=run_config.name,
+            storage_path=checkpoint_dir,
+            failure_config=FailureConfig(max_failures=max_failures)
+        )
+    
     trainer = create_yolo_trainer(
         config, 
         data_yaml, 
@@ -166,3 +207,43 @@ def run_distributed_training(config, data_yaml, scaling_config, checkpoint_confi
     best_checkpoint = result.best_checkpoints[0][0]
     
     return result, best_checkpoint
+
+if __name__ == "__main__":
+    scaling_config = ScalingConfig(
+        num_workers=2,
+        use_gpu=True,
+        resources_per_worker={
+            "CPU": 4,
+            "GPU": 1,
+        }
+    )
+    
+    config = {
+        "model_name": "yolo12n.pt",
+        "epochs": 50,
+        "batch_size": 16,
+        "img_size": 640,
+        "lr": 0.01,
+        "workers": 4,
+        "hsv_h": 0.015,
+        "hsv_s": 0.7,
+        "hsv_v": 0.4,
+        "translate": 0.1,
+        "scale": 0.5,
+        "fliplr": 0.5,
+        "mosaic": 1.0,
+        "patience": 10,
+    }
+    
+    data_yaml = "config/data.yaml"
+    s3_checkpoint_path = f"s3://{os.environ.get('BUCKET_NAME', 'mlflow-artifacts')}/ray-checkpoints"
+    
+    result, best_checkpoint = run_distributed_training(
+        config=config,
+        data_yaml=data_yaml,
+        scaling_config=scaling_config,
+        checkpoint_dir=s3_checkpoint_path,
+        max_failures=2
+    )
+    
+    print(f"Training complete with best checkpoint at: {best_checkpoint}")

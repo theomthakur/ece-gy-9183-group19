@@ -63,7 +63,7 @@ def run_hyperparameter_tuning(
     if resources_per_trial is None:
         resources_per_trial = {
             "cpu": 4,
-            "gpu": 0.5,
+            "gpu": 1,
         }
     
     base_config = config.copy()
