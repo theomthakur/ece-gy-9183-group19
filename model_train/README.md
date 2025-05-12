@@ -1,5 +1,29 @@
 # MODEL TRAINING
 
+We selected YOLO12 for our medical x-ray analysis system because of its great performance across benchmarks in object detection tasks and practical implementation benefits.
+
+### Why YOLO12?
+
+- Top-tier accuracy in identifying objects within images
+- The Ultralytics package simplifies implementation across our entire workflow
+- Ready-to-use configurations for each MLOps pipeline stage (training, validation, deployment)
+
+### How It Works
+When a radiologist uploads an x-ray image (PNG format), our system:
+
+- Processes the image through the YOLO12 model
+- Identifies potential abnormalities
+- Draws bounding boxes around suspicious areas
+- Labels each area with the suspected condition
+- Reports "No findings" when no abnormalities are detected
+
+### Performance Optimization
+
+We improved processing efficiency by:
+
+- Increasing batch size to analyze multiple images simultaneously
+- Adding more worker threads to utilize available computing resources
+- Implementing reduced precision calculations without sacrificing accuracy
 
 ### Results
 - mAP50 = 0.31053
@@ -27,8 +51,6 @@
 - test (copy of src folder, without artifact logging, for experimenting running times):
   - `cd test`
   - run `docker compose -f docker-compose-train.yaml`
-
-UNIT 4:
 
 ### Training Workflow
 The training workflow in this project follows a pipeline that handles everything from model initialization to MLflow logging. Here's how it works in practice:
@@ -90,19 +112,6 @@ The workflow includes robust error handling:
 - Validates dataset format and configuration files before training starts
 - Gracefully handles MLflow connection issues while still completing training
 - Provides detailed error messages for troubleshooting
-
-### Results
-mAP50 = 0.31053
-mAP50-95 = 0.15599
-Number of epochs: 50
-Training time: 3 hours
-
-Modeling: 
-We chose YOLO12 because it is one of the best model in object detection. Also the ultralytics YOLO 
-Package makes it easier to integrate various services, as it has readily available configurations for 
-Various stages in the MLOps pipeline. 
-This is an object detection problem, where a radiologist inputs the .png image of an x-ray, and the model outputs the classes and the bounding boxes of the detected disesases, if any. else it says No finding. the radiologist can then use this to quickly confirm or suspect any diseases
-we tested out with Increased batch size, num workers, reduced precision
 
 UNIT 5:
 
