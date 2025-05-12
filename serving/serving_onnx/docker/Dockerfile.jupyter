@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages
+RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
 RUN pip install --no-cache-dir \
     bash_kernel \
     tritonclient[all] \
@@ -19,12 +21,18 @@ RUN pip install --no-cache-dir \
     opencv-python-headless \
     pillow \
     numpy \
-    matplotlib
+    matplotlib \ 
+    boto3 \
+    label-studio-sdk
 
-COPY ./workspace/ /home/jovyan/work/
+# COPY ./workspace/ /home/jovyan/work/
 
 # Install bash kernel
 RUN python -m bash_kernel.install
+
+# Fix permissions for the work directory
+RUN mkdir -p /home/jovyan/work && \
+    fix-permissions /home/jovyan/work
 
 # Set working directory
 WORKDIR "${HOME}/"

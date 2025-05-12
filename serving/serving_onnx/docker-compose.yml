@@ -5,19 +5,29 @@ services:
       context: /home/cc/serving-monitoring/serving/serving_onnx
       dockerfile: docker/Dockerfile.triton
     container_name: triton_server
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 4G  # Set an appropriate value based on the system
+    #     reservations:
+    #       memory: 2G  # Minimum memory needed
     ports:
       - "8000:8000"  # for HTTP requests
       - "8001:8001"  # for GRPC requests
       - "8002:8002"  # for reporting metrics
     volumes:
       - ./models:/models  # Mount models directory
+    networks:
+      - production_net
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=void
 
   streamlit:
     build:
@@ -28,9 +38,18 @@ services:
       - "8501:8501"  # Map host 8501 to container 8501
     depends_on:
       - triton_server
+      - minio
+    volumes:
+    - ./streamlit_app:/app  # Mount local directory to container
     environment:
       - TRITON_SERVER_URL=triton_server:8000
       - CHEST_XRAY_MODEL_NAME=chest_xray_detector
+      - MINIO_URL=http://minio:9000
+      - MINIO_ROOT_USER=PROSadmin19
+      - MINIO_ROOT_PASSWORD=PROSadmin19
+      - BUCKET_NAME=production
+    networks:
+      - production_net
 
   prometheus:
     image: prom/prometheus:latest
@@ -39,6 +58,8 @@ services:
       - "9090:9090"
     volumes:
       - ./Monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - production_net
 
   grafana:
     image: grafana/grafana:latest
@@ -50,6 +71,8 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - production_net
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
@@ -65,6 +88,56 @@ services:
     devices:
       - /dev/kmsg
     privileged: true
+    networks:
+      - production_net
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=PROSadmin19
+      - MINIO_ROOT_PASSWORD=PROSadmin19
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ':9001'
+    networks:
+      - production_net
+
+  minio-init:
+    image: minio/mc
+    container_name: minio_init
+    depends_on:
+      - minio
+    restart: "no"
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5 &&
+      mc alias set myminio http://minio:9000 PROSadmin19 PROSadmin19 &&
+      mc mb -p myminio/production || echo 'Bucket already exists'
+      "
+    networks:
+      - production_net
+
+  label-studio:
+    image: heartexlabs/label-studio:latest
+    container_name: label-studio
+    ports:
+      - "5051:8080"
+    volumes:
+      - /home/cc/serving-monitoring/serving/serving_onnx/Monitoring/label_studio_scripts:/label-studio/scripts
+      - /mnt/block/label_studio_data:/label-studio/data  # Using named volume for data
+    environment:
+      - LABEL_STUDIO_URL=http://label-studio:8080
+      - LABEL_STUDIO_USERNAME=labelstudio@example.com
+      - LABEL_STUDIO_PASSWORD=labelstudio
+      - LABEL_STUDIO_USER_TOKEN=ab9927067c51ff279d340d7321e4890dc2841c4a
+    networks:
+      - production_net
+
+# sudo chown 1001:1001 /mnt/block/label_studio_data
 
   jupyter:
     build:
@@ -73,5 +146,25 @@ services:
     container_name: jupyter
     ports:
       - "8888:8888"
-    # volumes:
-    #   - /home/cc/serving-monitoring/serving_onnx/workspace:/home/jovyan/workspace  # mount workspace
+    volumes:
+      - ./workspace:/home/jovyan/workspace  # mount workspace
+    user: "1000:1000"  # Set the user explicitly
+    environment:
+      - NB_UID=1000  # Match the UID to your host system if needed
+      - NB_GID=1000  # Match the GID to your host system if needed
+      - CHOWN_HOME=yes
+      - CHOWN_HOME_OPTS='-R'
+      - LABEL_STUDIO_URL=http://label-studio:8080
+      - LABEL_STUDIO_USER_TOKEN=ab9927067c51ff279d340d7321e4890dc2841c4a
+      - MINIO_URL=http://minio:9000
+      - MINIO_ROOT_USER=PROSadmin19
+      - MINIO_ROOT_PASSWORD=PROSadmin19
+    networks:
+      - production_net
+
+networks:
+  production_net:
+
+volumes:
+  minio_data:
+  label_studio_data:

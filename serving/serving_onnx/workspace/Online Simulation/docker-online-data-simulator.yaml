@@ -1,0 +1,22 @@
+name: online-data-simulator
+
+services:
+  online-data-simulator:
+    container_name: online_data_simulator
+    image: python:3.11-slim
+    volumes:
+      - /mnt/model-checkpoints:/mnt/model-checkpoints
+      - ~/.config/rclone/rclone.conf:/root/.config/rclone/rclone.conf:ro
+      - ./online_data_simulator.py:/app/online_data_simulator.py
+    environment:
+      - TRITON_SERVER_URL=http://triton_server:8000  # Replace with <inference-ip>:8000 if needed
+      - SWIFT_CONTAINER=object-persist-project19
+      - LOAD_PATTERN=1,2,3,5,3,2,1
+      - DELAY_BETWEEN_STEPS=60
+      - REQUEST_TIMEOUT=5
+    command:
+      - bash
+      - -c
+      - |
+        pip install requests pillow numpy torch torchvision --index-url https://download.pytorch.org/whl/cpu ultralytics rclone bash_kernel tritonclient[all] opencv-python-headless matplotlib boto3 &&
+        python /app/online_data_simulator.py
