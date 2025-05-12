@@ -19,21 +19,28 @@ def train_func(config):
     
     yaml_path = config["data_yaml"]
     model_name = config["model_name"]
+    pretrained_weights = config.get("pretrained_weights", None)
     
-    print(f"Worker {rank}/{world_size} starting training with YOLO model {model_name}")
+    is_retraining = pretrained_weights is not None
+    model_info = f"{model_name} (retraining from {pretrained_weights})" if is_retraining else model_name
+    
+    print(f"Worker {rank}/{world_size} starting {'re' if is_retraining else ''}training with YOLO model {model_info}")
     
     try:
-        if os.path.exists(model_name):
+        if is_retraining and os.path.exists(pretrained_weights):
+            print(f"Worker {rank}: Loading pretrained weights from {pretrained_weights}")
+            model = YOLO(pretrained_weights)
+        elif os.path.exists(model_name):
             model = YOLO(model_name)
         else:
             model = YOLO(model_name)
-        print(f"Worker {rank}: Successfully loaded model {model_name}")
+        print(f"Worker {rank}: Successfully loaded model {model_info}")
     except Exception as e:
         print(f"Worker {rank}: Error loading model: {e}")
         raise e
     
     timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
-    run_name = config.get("run_name", f"{model_name}-{timestamp}-worker{rank}")
+    run_name = config.get("run_name", f"{'retrain-' if is_retraining else ''}{model_name}-{timestamp}-worker{rank}")
     
     epochs = config.get("epochs", 50)
     batch_size = config.get("batch_size", 16)
@@ -67,7 +74,7 @@ def train_func(config):
     
     output_dir = config.get("output_dir", "./runs")
     
-    print(f"Worker {rank}: Starting training for {epochs} epochs")
+    print(f"Worker {rank}: Starting {'re' if is_retraining else ''}training for {epochs} epochs")
     start_time = time.time()
     
     try:
@@ -75,7 +82,7 @@ def train_func(config):
         resume_weights = None
         
         if checkpoint:
-            print(f"Worker {rank}: Restoring from checkpoint")
+            print(f"Worker {rank}: Restoring from Ray checkpoint")
             with checkpoint.as_directory() as checkpoint_dir:
                 resume_weights = os.path.join(checkpoint_dir, "best.pt")
                 if os.path.exists(resume_weights):
@@ -85,8 +92,11 @@ def train_func(config):
                     resume_weights = None
         
         if resume_weights:
-            print(f"Worker {rank}: Resuming training from {resume_weights}")
+            print(f"Worker {rank}: Resuming training from Ray checkpoint {resume_weights}")
             model = YOLO(resume_weights)
+        
+        if is_retraining and not resume_weights:
+            print(f"Worker {rank}: Retraining using weights from {pretrained_weights}")
         
         results = model.train(
             data=yaml_path,
@@ -124,12 +134,18 @@ def train_func(config):
             
         run_dir = os.path.join(output_dir, run_name)
         
-        train.report({
+        metrics_to_report = {
             "map": metrics_dict.get("map", 0.0),
             "map50": metrics_dict.get("map50", 0.0),
             "map75": metrics_dict.get("map75", 0.0),
-            "training_time_minutes": training_duration
-        })
+            "training_time_minutes": training_duration,
+            "is_retraining": 1 if is_retraining else 0
+        }
+        
+        if is_retraining:
+            metrics_to_report["pretrained_weights"] = pretrained_weights
+        
+        train.report(metrics_to_report)
         
         best_model_path = os.path.join(run_dir, "weights", "best.pt")
         if os.path.exists(best_model_path):
