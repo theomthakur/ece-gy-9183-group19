@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # --- Configuration ---
 BBOX_CSV = "/app/scaled_bounding_boxes.csv"
-IMG_DIR = "/app/images"  # Optional: for sample images
+IMG_DIR = "/app/images" 
 SPLITS = ["training", "validation", "test", "staging", "canary", "production"]
 SPLIT_SIZES = {
     "training": 11500,
@@ -223,7 +223,6 @@ for idx, class_name in enumerate(classes):
     ax.set_title(class_name)
     ax.axis('off')
 
-# Remove unused subplots
 for ax in axes[len(classes):]:
     ax.axis('off')
 
