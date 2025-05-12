@@ -98,7 +98,7 @@ spec:
             echo "ERROR: model.pt not found in MLflow artifacts"; exit 1
           fi
 
-          echo "Copying model.pth to app/ as food11.pth..."
+          echo "Copying yolo12n.pt to app/ as yolo12n.pt..."
           cp "$FOUND" /mnt/workspace/yolo12n.pt
           echo "1.0.{{inputs.parameters.model-version}}" > /mnt/workspace/versions.txt
       volumeMounts:

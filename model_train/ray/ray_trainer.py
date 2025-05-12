@@ -241,13 +241,6 @@ if __name__ == "__main__":
         "img_size": 640,
         "lr": 0.01,
         "workers": 4,
-        "hsv_h": 0.015,
-        "hsv_s": 0.7,
-        "hsv_v": 0.4,
-        "translate": 0.1,
-        "scale": 0.5,
-        "fliplr": 0.5,
-        "mosaic": 1.0,
         "patience": 10,
     }
     

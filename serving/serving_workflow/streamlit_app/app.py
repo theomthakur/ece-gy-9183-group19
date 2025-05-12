@@ -99,6 +99,10 @@ if 'result_images' not in st.session_state:
 
 server_url = st.text_input("Triton Server URL", value=TRITON_SERVER_URL)
 model_name = st.text_input("Model Name", value=MODEL_NAME)
+MINIO_URL = st.text_input("MinIO URL", value=MINIO_URL)
+# MINIO_ACCESS_KEY = st.text_input("MinIO Access Key", value=MINIO_ACCESS_KEY)
+# MINIO_SECRET_KEY = st.text_input("MinIO Secret Key", value=MINIO_SECRET_KEY)
+BUCKET_NAME = st.text_input("Bucket Name", value=BUCKET_NAME)
 
 uploaded_file = st.file_uploader("Upload a chest X-ray image", type=["jpg", "jpeg", "png"])
 

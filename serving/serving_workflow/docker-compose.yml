@@ -1,0 +1,48 @@
+name: serving_workflow
+services:
+  triton_server:
+    build:
+      context: ./triton_server
+      dockerfile: Dockerfile.triton
+    container_name: triton_server
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 4G  
+    #     reservations:
+    #       memory: 2G  # Minimum memory needed
+    ports:
+      - "8000:8000"  # for HTTP requests
+      - "8001:8001"  # for GRPC requests
+      - "8002:8002"  # for reporting metrics
+    volumes:
+      - ./triton_server/models:/models  # Mount models directory
+    networks:
+      - production_net
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=void
+
+  streamlit:
+    build:
+      context: ./streamlit_app
+      dockerfile: Dockerfile.streamlit
+    container_name: streamlit_server
+    ports:
+      - "8501:8501"  # Map host 8501 to container 8501
+    depends_on:
+      - triton_server
+    volumes:
+    - ./streamlit_app:/app  # Mount local directory to container
+    environment:
+      - TRITON_SERVER_URL=triton_server:8000
+      - CHEST_XRAY_MODEL_NAME=chest_xray_detector
+      - MINIO_URL=http://129.114.26.168:9000
+      - MINIO_ROOT_USER=minio_user
+      - MINIO_ROOT_PASSWORD=VhPjUHuggyzDEhq0oNOa
+      - BUCKET_NAME=mlflow-artifact
+    networks:
+      - production_net
+
+
+networks:
+  production_net:
