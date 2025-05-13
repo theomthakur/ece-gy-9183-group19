@@ -230,7 +230,8 @@ Our final report will detail the system-level optimizations implemented, the con
 
 
 # Continues pipeline:ML Pipeline Infrastructure with Kubernetes
-![image](https://github.com/user-attachments/assets/4b53f052-0f7e-482f-a756-43cea171bfc7)
+![image](https://github.com/user-attachments/assets/b2a9204a-4f02-44af-9d4b-36a1937a0090)
+
 
 
 This part sets up  our complete machine learning pipeline on Chameleon Cloud using Kubernetes(This below setup is for only non gpu part provisioning via tf,infra related to training is provisioned via via python-chi(check model_train folder)). It handles everything from setting up servers to deploying models in different environments(check this for:https://github.com/theomthakur/ece-gy-9183-group19/tree/main/iac).
