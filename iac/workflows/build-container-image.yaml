@@ -149,7 +149,7 @@ spec:
       args:
         - --dockerfile=/mnt/workspace/ece-gy-9183-group19/serving/serving_workflow/triton_server/Dockerfile.triton
         - --context=/mnt/workspace/ece-gy-9183-group19/serving/serving_workflow/triton_server
-        - --destination=registry.kube-system.svc.cluster.local:5000/triton-server:staging-1.0.{{inputs.parameters.model-version}}
+        - --destination=registry.kube-system.svc.cluster.local:5000/gourmetgram-app:staging-1.0.{{inputs.parameters.model-version}}
         - --insecure
 
       volumeMounts:
@@ -160,35 +160,35 @@ spec:
 
 
 
-  - name: kaniko-streamlit
+  # - name: kaniko-streamlit
 
-    inputs:
+  #   inputs:
 
-      parameters:
+  #     parameters:
 
-      - name: model-version
+  #     - name: model-version
 
-    container:
+  #   container:
 
-      image: gcr.io/kaniko-project/executor:latest
+  #     image: gcr.io/kaniko-project/executor:latest
 
-      resources:
+  #     resources:
 
-        requests:
+  #       requests:
 
-          memory: "1500Mi"
+  #         memory: "1500Mi"
 
-      args:
+  #     args:
 
-        - --dockerfile=/mnt/workspace/ece-gy-9183-group19/serving/serving_workflow/streamlit_app/Dockerfile.streamlit
+  #       - --dockerfile=/mnt/workspace/ece-gy-9183-group19/serving/serving_workflow/streamlit_app/Dockerfile.streamlit
 
-        - --context=/mnt/workspace/ece-gy-9183-group19/serving/serving_workflow/streamlit_app
+  #       - --context=/mnt/workspace/ece-gy-9183-group19/serving/serving_workflow/streamlit_app
 
-        - --destination=registry.kube-system.svc.cluster.local:5000/streamlit-app:staging-1.0.{{inputs.parameters.model-version}}
-        - --insecure
-      volumeMounts:
-      - name: workdir
-        mountPath: /mnt/workspace
+  #       - --destination=registry.kube-system.svc.cluster.local:5000/streamlit-app:staging-1.0.{{inputs.parameters.model-version}}
+  #       - --insecure
+  #     volumeMounts:
+  #     - name: workdir
+  #       mountPath: /mnt/workspace
 
   - name: set-mlflow-alias
     inputs:
