@@ -228,3 +228,88 @@ Our `yolo_ray_main.py` provides a unified interface for our team to:
 - Train new models: `--mode train`
 - Continue training from existing checkpoints: `--mode retrain --model_path /path/to/model.pt`
 - Run hyperparameter optimization: `--mode tune --num_samples 20`
+
+## Infrastructure Setup on Chameleon Cloud (Optional)
+
+If you plan to run the training and deployment workflows on Chameleon Cloud, you'll first need to provision and configure a GPU-enabled server. Below are the steps to achieve this, derived from the setup process used in our project.
+
+**1. Prerequisites on Chameleon Cloud:**
+
+*   **Account and Project:** You need an active Chameleon Cloud account and an allocated project.
+*   **Lease a GPU Node:**
+    *   Create a lease for at least one GPU-enabled bare metal node (e.g., `gpu_rtx_6000` or similar).
+    *   Note your **Lease Name** and **Reservation ID** for the node. You will need the Reservation ID when creating the server.
+    *   Ensure your lease is active before proceeding.
+*   **SSH Keypair:** Ensure you have an SSH keypair configured in your Chameleon profile and that you have the private key accessible on your local machine. This keypair will be associated with the server.
+
+**2. Provision the Server Instance:**
+
+Using the Chameleon Cloud portal (or `openstack` CLI if you are familiar with it):
+
+*   **Navigate to "Instances"** in your project.
+*   **Launch Instance:**
+    *   **Instance Name:** Choose a name (e.g., `my-llm-node`).
+    *   **Source:** Select "Image" and search for `CC-Ubuntu24.04-CUDA`. This image comes with NVIDIA drivers and CUDA pre-installed.
+    *   **Flavor:** Select `baremetal`.
+    *   **Networks:** Select `sharednet1` (or the appropriate public network for your site).
+    *   **Key Pair:** Select the SSH keypair you prepared earlier.
+    *   **Scheduler Hints (Advanced Options):** Under "Advanced Options" or "Scheduler Hints", add a hint: `reservation=<YOUR_NODE_RESERVATION_ID>`. Replace `<YOUR_NODE_RESERVATION_ID>` with the ID from your lease. This ensures the server is launched on your reserved hardware.
+*   **Launch** the instance. Wait for it to become "ACTIVE".
+*   **Associate Floating IP:** Once the instance is active, associate a Floating IP address to it so it's accessible from the internet. Note down this Floating IP.
+
+**3. Configure the Server Software (via SSH):**
+
+SSH into your newly provisioned server using its Floating IP:
+```
+ssh cc@<YOUR_SERVER_FLOATING_IP> -i /path/to/your/chameleon_private_key
+```
+
+Replace <YOUR_SERVER_FLOATING_IP> and /path/to/your/chameleon_private_key. The default username for Chameleon appliances is cc.
+Once logged in, execute the following commands to set up Docker, NVIDIA Container Toolkit, and other utilities:
+
+Install Docker Engine:
+```
+curl -fsSL https://get.docker.com | sudo sh
+sudo groupadd -f docker
+sudo usermod -aG docker $USER
+```
+
+Note: After running usermod, you might need to log out and log back in, or run newgrp docker in your current session for the group changes to take effect immediately for your user. Otherwise, you'll need to prefix docker commands with sudo.
+Install NVIDIA Container Toolkit:
+```
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+  && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+# Update package list and install toolkit
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+
+# Configure Docker to use NVIDIA runtime
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+```
+
+Verify GPU Access within Docker:
+```
+sudo docker run --rm --gpus all ubuntu nvidia-smi
+```
+
+This command should output the nvidia-smi details, showing your server's GPU(s).
+Install nvtop (GPU process monitor):
+```
+sudo apt-get update
+sudo apt-get install -y nvtop
+```
+4. Pull Required Docker Images for the Project:
+These are the primary images used by different parts of this project:
+Jupyter PyTorch Notebook (for single-GPU experimentation/interactive work):
+```
+sudo docker pull quay.io/jupyter/pytorch-notebook:cuda12-pytorch-2.5.1
+```
+PyTorch Devel Image (base for multi-GPU training, e.g., with DeepSpeed):
+```
+sudo docker pull pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel
+```
+Note: This image pull can take a significant amount of time.
