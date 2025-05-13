@@ -93,19 +93,51 @@ spec:
             -d /tmp/mlflow_model || { echo "MLflow download failed"; exit 1; }
 
           echo "Searching for model.pth..."
-          FOUND=$(find /tmp/mlflow_model/data -name model.pt | head -n 1)
+          FOUND=$(find /tmp/mlflow_model/data -name best.onnx | head -n 1)
           if [ -z "$FOUND" ]; then
             echo "ERROR: model.pt not found in MLflow artifacts"; exit 1
           fi
 
           echo "Copying yolo12n.pt to app/ as yolo12n.pt..."
-          cp "$FOUND" /mnt/workspace/yolo12n.pt
+          cp "$FOUND" /mnt/workspace/model.onnx
           echo "1.0.{{inputs.parameters.model-version}}" > /mnt/workspace/versions.txt
       volumeMounts:
       - name: workdir
         mountPath: /mnt/workspace
 
-  - name: kaniko
+  - name: prepare-contexts
+
+    inputs:
+
+      parameters:
+
+      - name: model-version
+
+    container:
+
+      image: alpine
+
+      command: [sh, -c]
+
+      args:
+
+        - |
+
+          echo "Preparing build contexts for triton_server and streamlit..."
+
+          cp /mnt/workspace/model.onnx /mnt/workspace/ece-gy-9183-group19/serving/serving_workflow/triton_server/models/chest_xray_detector/1/model.onnx
+
+          echo "Build contexts prepared."
+
+      volumeMounts:
+
+      - name: workdir
+
+        mountPath: /mnt/workspace
+
+
+
+  - name: kaniko-triton
     inputs:
       parameters:
       - name: model-version
@@ -113,11 +145,46 @@ spec:
       image: gcr.io/kaniko-project/executor:latest
       resources:
         requests:
-          memory: "1500Mi"
+          memory: "2000Mi"
       args:
-        - --dockerfile=/mnt/workspace/Dockerfile
-        - --context=/mnt/workspace
-        - --destination=registry.kube-system.svc.cluster.local:5000/gourmetgram-app:staging-1.0.{{inputs.parameters.model-version}}
+        - --dockerfile=/mnt/workspace/ece-gy-9183-group19/serving/serving_workflow/triton_server/Dockerfile.triton
+        - --context=/mnt/workspace/ece-gy-9183-group19/serving/serving_workflow/triton_server
+        - --destination=registry.kube-system.svc.cluster.local:5000/triton-server:staging-1.0.{{inputs.parameters.model-version}}
+        - --insecure
+
+      volumeMounts:
+
+      - name: workdir
+
+        mountPath: /mnt/workspace
+
+
+
+  - name: kaniko-streamlit
+
+    inputs:
+
+      parameters:
+
+      - name: model-version
+
+    container:
+
+      image: gcr.io/kaniko-project/executor:latest
+
+      resources:
+
+        requests:
+
+          memory: "1500Mi"
+
+      args:
+
+        - --dockerfile=/mnt/workspace/ece-gy-9183-group19/serving/serving_workflow/streamlit_app/Dockerfile.streamlit
+
+        - --context=/mnt/workspace/ece-gy-9183-group19/serving/serving_workflow/streamlit_app
+
+        - --destination=registry.kube-system.svc.cluster.local:5000/streamlit-app:staging-1.0.{{inputs.parameters.model-version}}
         - --insecure
       volumeMounts:
       - name: workdir
@@ -156,3 +223,4 @@ spec:
               value: "{{inputs.parameters.environment}}"
             - name: model-version
               value: "{{inputs.parameters.model-version}}"
+
