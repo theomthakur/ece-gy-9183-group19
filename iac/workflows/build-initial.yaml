@@ -52,9 +52,12 @@ spec:
       args:
         - --dockerfile=/mnt/workspace/Dockerfile
         - --context=/mnt/workspace
-        - --destination=registry.kube-system.svc.cluster.local:5000/gourmetgram-app:staging-1.0.0
-        - --destination=registry.kube-system.svc.cluster.local:5000/gourmetgram-app:canary-1.0.0
-        - --destination=registry.kube-system.svc.cluster.local:5000/gourmetgram-app:production-1.0.0
+        - --destination=registry.kube-system.svc.cluster.local:5000/triton-server:staging-1.0.0
+        - --destination=registry.kube-system.svc.cluster.local:5000/triton-server:canary-1.0.0
+        - --destination=registry.kube-system.svc.cluster.local:5000/triton-server:production-1.0.0
+        - --destination=registry.kube-system.svc.cluster.local:5000/streamlit-app:staging-1.0.0
+        - --destination=registry.kube-system.svc.cluster.local:5000/streamlit-app:canary-1.0.0
+        - --destination=registry.kube-system.svc.cluster.local:5000/streamlit-app:production-1.0.0
         - --insecure
       volumeMounts:
         - name: workdir
