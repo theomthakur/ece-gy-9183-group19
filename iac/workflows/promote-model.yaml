@@ -54,13 +54,8 @@ spec:
           skopeo copy \
             --src-tls-verify=false \
             --dest-tls-verify=false \
-            docker://registry.kube-system.svc.cluster.local:5000/triton-server:{{inputs.parameters.source-environment}}-1.0.{{inputs.parameters.model-version}} \
-            docker://registry.kube-system.svc.cluster.local:5000/triton-server:{{inputs.parameters.target-environment}}-1.0.{{inputs.parameters.model-version}}
-          skopeo copy \
-            --src-tls-verify=false \
-            --dest-tls-verify=false \
-            docker://registry.kube-system.svc.cluster.local:5000/streamlit-app:{{inputs.parameters.source-environment}}-1.0.{{inputs.parameters.model-version}} \
-            docker://registry.kube-system.svc.cluster.local:5000/streamlit-app:{{inputs.parameters.target-environment}}-1.0.{{inputs.parameters.model-version}}
+            docker://registry.kube-system.svc.cluster.local:5000/gourmetgram-app:{{inputs.parameters.source-environment}}-1.0.{{inputs.parameters.model-version}} \
+            docker://registry.kube-system.svc.cluster.local:5000/gourmetgram-app:{{inputs.parameters.target-environment}}-1.0.{{inputs.parameters.model-version}}
 
   - name: set-mlflow-alias
     inputs:
